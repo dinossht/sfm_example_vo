@@ -35,7 +35,6 @@ class BatchBundleAdjustment:
                 factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
                                                               X(keyframe.id()), L(map_point.id()),
                                                               calibration)
-
                 graph.push_back(factor)
 
         # Set prior on the first camera (which we will assume defines the reference frame).
@@ -43,19 +42,23 @@ class BatchBundleAdjustment:
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
         graph.push_back(factor)
 
-        # TODO: remove when three cameras are used to triangulate
-        # Set prior on landmarks
-        point3d_list = [p._point_w for p in list(sfm_map.get_map_points())]
-        for i in range(len(point3d_list)):
-            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 0.1 * 10)
-            factor = PriorFactorPoint3(L(i), point3d_list[i], point_noise)
-            graph.push_back(factor)
-
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
         prior_distance = 1.0
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
+
+        """
+        print("some times, depending on num keyframes, and initializing, system can become ill determined")
+        print("solution add gps priors for eks")
+        # TODO: remove when three cameras are used to triangulate
+        # Set prior on landmarks
+        point3d_list = [p._point_w for p in list(sfm_map.get_map_points())]
+        for i in range(len(point3d_list)):
+            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 100)  # 0.1)
+            factor = PriorFactorPoint3(L(i), point3d_list[i], point_noise)
+            graph.push_back(factor)
+        """
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
