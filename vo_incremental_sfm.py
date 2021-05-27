@@ -107,7 +107,7 @@ def initialize_map(frame_0, frame_1, frame_2):
     img0 = cv.imread("my_data/img1.png", cv.IMREAD_GRAYSCALE)  # queryImage
     img1 = cv.imread("my_data/img10.png", cv.IMREAD_GRAYSCALE)  # trainImage
 
-    feature = Feature(5000)
+    feature = Feature(2000)
 
     kp0, des0 = feature.detectAndCompute(img0)
     kp1, des1 = feature.detectAndCompute(img1)
