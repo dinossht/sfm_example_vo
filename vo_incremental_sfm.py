@@ -143,7 +143,6 @@ def initialize_map(frame_0, frame_1, frame_2):
     id_0 = id_0[depth_mask]
     id_1 = id_1[depth_mask]
 
- 
     # Third frame
     img2 = cv.imread("my_data/img20.png", cv.IMREAD_GRAYSCALE) 
     kp2, des2 = feature.detectAndCompute(img2)
@@ -159,11 +158,10 @@ def initialize_map(frame_0, frame_1, frame_2):
     id_0 = id_0[idx_3d]
     id_1 = id_1[idx_3d]
     id_2 = idx_2
-    points_0 = points_0[:, idx_3d]
+    points_0_new = points_0[:, idx_3d]
 
     kp_new = convertToPoints(kp2[id_2]).T
-    pose_w_new = estimate_pose_from_map_correspondences(K, kp_new, points_0) # pose_w_c, w == world_frame, new == cam_frame
- 
+    pose_0_2 = estimate_pose_from_map_correspondences(K, kp_new, points_0_new) # pose_w_c, w == world_frame, new == cam_frame
 
     sfm_map = SfmMap()
 
@@ -174,7 +172,7 @@ def initialize_map(frame_0, frame_1, frame_2):
     kf_1 = Keyframe(frame_1, pose_0_1)
     sfm_map.add_keyframe(kf_1)
     # Add third keyframe from relative pose.
-    kf_2 = Keyframe(frame_2, pose_0_1)
+    kf_2 = Keyframe(frame_2, pose_0_2)
     sfm_map.add_keyframe(kf_2)
 
     matched_frames = [frame_0, frame_1, frame_2]
@@ -186,7 +184,7 @@ def initialize_map(frame_0, frame_1, frame_2):
     for i in range(num_points):
         
         curr_track = FeatureTrack()
-        curr_map_point = MapPoint(i, points_0[:, [i]])
+        curr_map_point = MapPoint(i, points_0_new[:, [i]])
 
         for c in range(3):
             cam_ind = c
@@ -204,6 +202,27 @@ def initialize_map(frame_0, frame_1, frame_2):
     for frame in matched_frames:
         frame.update_covisible_frames()
 
+
+    """
+    # TODO: how to handle new map point ids? Do new point triangulation?
+    # Third frame
+    img3 = cv.imread("my_data/img30.png", cv.IMREAD_GRAYSCALE) 
+    kp3, des3 = feature.detectAndCompute(img3)
+
+    # input: 3d descriptor, new 2d descriptor
+    idx_3d, idx_3, good = feature.goodMatches(des0_3d, des3)
+
+    # output: matches
+    id_3 = idx_3
+    points_0_new = points_0[:, idx_3d]
+
+    kp_new = convertToPoints(kp3[id_3]).T
+    pose_0_3 = estimate_pose_from_map_correspondences(K, kp_new, points_0_new) # pose_w_c, w == world_frame, new == cam_frame
+
+    # Add third keyframe from relative pose.
+    kf_3 = Keyframe(frame_3, pose_0_3)
+    sfm_map.add_keyframe(kf_3)
+    """
 
     return sfm_map
     
