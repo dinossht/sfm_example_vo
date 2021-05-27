@@ -9,6 +9,8 @@ from utils import *
 from frontend import *
 import matplotlib.pyplot as plt
 
+# TODO: remove bad map points after optimization
+
 f = np.array([[1.9954e+03, 1.9952e+03]]).T
 principal_point = np.array([[9.6550e+02, 6.0560e+02]]).T
 
@@ -105,7 +107,7 @@ def initialize_map(frame_0, frame_1, frame_2):
     img0 = cv.imread("my_data/img1.png", cv.IMREAD_GRAYSCALE)  # queryImage
     img1 = cv.imread("my_data/img10.png", cv.IMREAD_GRAYSCALE)  # trainImage
 
-    feature = Feature(2000)
+    feature = Feature(5000)
 
     kp0, des0 = feature.detectAndCompute(img0)
     kp1, des1 = feature.detectAndCompute(img1)
@@ -141,28 +143,31 @@ def initialize_map(frame_0, frame_1, frame_2):
     id_0 = id_0[depth_mask]
     id_1 = id_1[depth_mask]
 
-
-
-    
-    """
+ 
+    # TODO: take new 3d points, and their keypoints and add to map
     # Third frame
-    img2 = cv.imread("my_data/img20.png", cv.IMREAD_GRAYSCALE)  # trainImage
+    img2 = cv.imread("my_data/img20.png", cv.IMREAD_GRAYSCALE) 
     kp2, des2 = feature.detectAndCompute(img2)
 
-    idx0_2, idx1_2, good_2 = feature.goodMatches(des0[id_0], des2)
+    # input: 3d descriptor, new 2d descriptor
+    des0_3d = des0[id_0]
+    des1_3d = des0[id_1]
+    kp0_3d = kp0[id_0]
+    kp1_3d = kp0[id_1]
+    idx_3d, idx_2, good = feature.goodMatches(des0_3d, des2)
 
-    id_2 = idx1_2
+    # output: matches
+    id_0 = id_0[idx_3d]
+    id_1 = id_1[idx_3d]
+    id_2 = idx_2
+    points_0 = points_0[:, idx_3d]
+
     kp_new = convertToPoints(kp2[id_2]).T
-    pts_new = points_0[:, idx0_2] 
-    pose_w_new = estimate_pose_from_map_correspondences(K, kp_new, pts_new)
+    pose_w_new = estimate_pose_from_map_correspondences(K, kp_new, points_0) # pose_w_c, w == world_frame, new == cam_frame
     
     print(pose_0_1.translation)
-    print(pose_w_new.translation[:,0])
+    print(pose_w_new.translation[:,0])   
 
-    # Add third keyframe from relative pose.
-    kf_2 = Keyframe(frame_2, pose_w_new)
-    sfm_map.add_keyframe(kf_2)
-    """
 
 
 
@@ -174,20 +179,22 @@ def initialize_map(frame_0, frame_1, frame_2):
     # Add second keyframe from relative pose.
     kf_1 = Keyframe(frame_1, pose_0_1)
     sfm_map.add_keyframe(kf_1)
+    # Add third keyframe from relative pose.
+    kf_2 = Keyframe(frame_2, pose_0_1)
+    sfm_map.add_keyframe(kf_2)
 
-    matched_frames = [frame_0, frame_1]
-    ids = np.array([id_0, id_1])
-    kps = np.array([kp0, kp1])
+    matched_frames = [frame_0, frame_1, frame_2]
+    ids = np.array([id_0, id_1, id_2])
+    kps = np.array([kp0, kp1, kp2], dtype=object)
     num_points = len(id_0)  # num matches
 
     img = matched_frames[0].load_image()
     for i in range(num_points):
         
-    
         curr_track = FeatureTrack()
         curr_map_point = MapPoint(i, points_0[:, [i]])
 
-        for c in range(2):
+        for c in range(3):
             cam_ind = c
             det_id = ids[c, i]
             
