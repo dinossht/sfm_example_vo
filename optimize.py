@@ -1,5 +1,6 @@
 import numpy as np
 import gtsam
+from gtsam import PriorFactorPoint3
 from sfm_map import SfmMap
 from pylie import SE3
 
@@ -25,7 +26,7 @@ class BatchBundleAdjustment:
 
         # Unfortunately, the dataset does not contain any information on uncertainty in the observations,
         # so we will assume a common observation uncertainty of 3 pixels in u and v directions.
-        obs_uncertainty = gtsam.noiseModel.Isotropic.Sigma(2, 3.0)
+        obs_uncertainty = gtsam.noiseModel.Isotropic.Sigma(2, 3.0) #(2, 3.0)
 
         # Add measurements.
         for keyframe in sfm_map.get_keyframes():
@@ -34,12 +35,21 @@ class BatchBundleAdjustment:
                 factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
                                                               X(keyframe.id()), L(map_point.id()),
                                                               calibration)
+
                 graph.push_back(factor)
 
         # Set prior on the first camera (which we will assume defines the reference frame).
         no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
         graph.push_back(factor)
+
+        # TODO: remove when three cameras are used to triangulate
+        # Set prior on landmarks
+        point3d_list = [p._point_w for p in list(sfm_map.get_map_points())]
+        for i in range(len(point3d_list)):
+            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 0.1 * 10)
+            factor = PriorFactorPoint3(L(i), point3d_list[i], point_noise)
+            graph.push_back(factor)
 
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
