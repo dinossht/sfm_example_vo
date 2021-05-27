@@ -144,7 +144,6 @@ def initialize_map(frame_0, frame_1, frame_2):
     id_1 = id_1[depth_mask]
 
  
-    # TODO: take new 3d points, and their keypoints and add to map
     # Third frame
     img2 = cv.imread("my_data/img20.png", cv.IMREAD_GRAYSCALE) 
     kp2, des2 = feature.detectAndCompute(img2)
@@ -164,12 +163,7 @@ def initialize_map(frame_0, frame_1, frame_2):
 
     kp_new = convertToPoints(kp2[id_2]).T
     pose_w_new = estimate_pose_from_map_correspondences(K, kp_new, points_0) # pose_w_c, w == world_frame, new == cam_frame
-    
-    print(pose_0_1.translation)
-    print(pose_w_new.translation[:,0])   
-
-
-
+ 
 
     sfm_map = SfmMap()
 
@@ -209,6 +203,7 @@ def initialize_map(frame_0, frame_1, frame_2):
 
     for frame in matched_frames:
         frame.update_covisible_frames()
+
 
     return sfm_map
     
