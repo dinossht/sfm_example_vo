@@ -6,6 +6,7 @@ from sfm_frontend_utils import *
 
 
 # TODO: add undistort
+# TODO: remove bad map points
 
 class UniquePoint3D:
     global_point_id = 0
@@ -54,8 +55,8 @@ class MyFeatTrack:
 
 
 class SFM_frontend:
-    def __init__(self):
-        self.feature = Feature(2000)
+    def __init__(self, num_feat=2000):
+        self.feature = Feature(num_feat)
 
         # Hardcoded
         self.f = np.array([[1.9954e+03, 1.9952e+03]]).T
@@ -90,7 +91,6 @@ class SFM_frontend:
 
         T_0_1, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
         pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
-        #print(pose_0_1)
 
         # Mask inliers kps
         feat_track[0].good_idxs = feat_track[0].good_idxs[inliers_mask.ravel()==1]
@@ -112,8 +112,14 @@ class SFM_frontend:
         depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
+        print(f"Num good depth: {len(feat_track[0].good_idxs)}")
 
+        # Filter non-unique idxs
+        unique_idxs = return_unique_mask(feat_track[1].good_idxs)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[unique_idxs]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[unique_idxs]
         assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs))  # unique indices check
+        print(f"Num unique: {len(feat_track[0].good_idxs)}")
 
         sfm_map = SfmMap()
         # Add first keyframe as reference frame.
@@ -184,11 +190,15 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[inliers_mask.ravel()==1]
         print(f"Num inliers: {len(feat_track[0].good_idxs)}")
 
-        assert len(set(good_idx_map)) == len(set(good_idx))  # unique indices check
+        # Filter non-unique idxs
+        unique_idxs = return_unique_mask(feat_track[1].good_idxs)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[unique_idxs]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[unique_idxs]
+        assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs))
+        print(f"Num unique inliers: {len(feat_track[0].good_idxs)}")
 
         points3d_map_matched = points3d_map[feat_track[0].good_idxs]
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
-        #print(pose_0_2)
 
         # Add keyframe to map
         kf = Keyframe(matched_frame, pose_0_2)
@@ -211,13 +221,18 @@ class SFM_frontend:
 
         return sfm_map
 
-    def create_new_map_points(self, frame_0, frame_1):  # keyframe 0 and keyframe 1
-        #pose is known
-        #triangulate using matching
+    def create_new_map_points(self, sfm_map, frame_id_0, frame_id_1):
+        print("New map points")
+        print("#" * 20)
+
+        kf_0 = sfm_map.get_keyframe(frame_id_0)
+        kf_1 = sfm_map.get_keyframe(frame_id_1)
+        kfs = [kf_0, kf_1]
+        matched_frames = [kf_0._frame, kf_1._frame]
+
         # Load images
-        matched_frames = [frame_0._frame, frame_1._frame]
-        img0 = matched_frames[0].load_image_grayscale()
-        img1 = matched_frames[1].load_image_grayscale()
+        img0 = kf_0._frame.load_image_grayscale()
+        img1 = kf_1._frame.load_image_grayscale()
 
         # Detect features
         kp0, des0 = self.feature.detectAndCompute(img0)
@@ -241,8 +256,8 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[inliers_mask.ravel()==1]
         print(f"Num inliers: {len(feat_track[0].good_idxs)}")
 
-        P_0 = matched_frames[0].camera_model().projection_matrix(frame_0.pose_w_c().inverse())
-        P_1 = matched_frames[1].camera_model().projection_matrix(frame_1.pose_w_c().inverse())
+        P_0 = kf_0._frame.camera_model().projection_matrix(kf_0.pose_w_c().inverse())
+        P_1 = kf_1._frame.camera_model().projection_matrix(kf_1.pose_w_c().inverse())
         points_0 = triangulate_points_from_two_views(P_0, feat_track[0].good_kps().T, P_1, feat_track[1].good_kps().T)
 
         # Create 3d points with unique id
@@ -257,21 +272,21 @@ class SFM_frontend:
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
 
-        assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs)), f"unique indices check {len(set(feat_track[0].good_idxs))} vs {len(set(feat_track[1].good_idxs))}"
+        # Filter non-unique idxs
+        unique_idxs = return_unique_mask(feat_track[1].good_idxs)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[unique_idxs]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[unique_idxs]
+        assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs)), \
+            f"unique indices check {len(set(feat_track[0].good_idxs))} vs {len(set(feat_track[1].good_idxs))}"
+        print(f"Num unique inliers: {len(feat_track[0].good_idxs)}")
 
-        sfm_map = SfmMap()
-        # Add first keyframe as reference frame.
-        kf_0 = Keyframe(matched_frames[0], frame_0.pose_w_c())
-        sfm_map.add_keyframe(kf_0)
-        # Add second keyframe from relative pose.
-        kf_1 = Keyframe(matched_frames[1], frame_1.pose_w_c())
-        sfm_map.add_keyframe(kf_1)
 
-        color_img = frame_0._frame.load_image()
+        color_img = kf_0._frame.load_image()
 
         num_points = len(feat_track[0].good_idxs)
         for i in range(num_points):
             curr_track = FeatureTrack()
+            # KF_0 is the keyframe to triangulate using
             curr_map_point_id = feat_track[0].good_pts3d_w()[i].id
             curr_map_point_coord = feat_track[0].good_pts3d_w()[i].point
             curr_map_point_des = feat_track[0].good_des()[i]  # first frame is the keyframe, so add it's descriptor
@@ -286,7 +301,7 @@ class SFM_frontend:
 
                 curr_track.add_observation(matched_frames[cam_ind], det_id)
                 matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
-                curr_map_point.add_observation(sfm_map.get_keyframe(cam_ind), det_id)
+                curr_map_point.add_observation(kfs[cam_ind], det_id)
 
             sfm_map.add_map_point(curr_map_point)
 

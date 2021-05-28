@@ -2,7 +2,6 @@
 from optimize import BatchBundleAdjustment
 from sfm_frontend import SFM_frontend
 import open3d as o3d
-from video_dataset import VideoDataset
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
@@ -23,13 +22,17 @@ def next_frame_path():
 def main():
     optimizer = BatchBundleAdjustment()
 
-    sfm_frontend = SFM_frontend()
+    sfm_frontend = SFM_frontend(2000)
 
+    # Add frame 0 and 1 to init
     path0, _ = next_frame_path()
     path1, _ = next_frame_path()
     sfm_map = sfm_frontend.initialize(path0, path1)
 
-    #sfm_map = sfm_frontend.create_new_map_points(sfm_map.get_keyframe(2), sfm_map.get_keyframe(3))
+    # Track a new frame
+    path, frame_id = next_frame_path()
+    sfm_frontend.track_map(sfm_map, frame_id, path)
+
 
     def get_geometry():
         poses = sfm_map.get_keyframe_poses()
@@ -71,10 +74,19 @@ def main():
             for geom in get_geometry():
                 vis.add_geometry(geom, reset_bounding_box=False)
 
+    def create_new_points(vis):
+            #sfm_map = 
+            sfm_frontend.create_new_map_points(sfm_map, 1, 2)
+
+            vis.clear_geometries()
+            for geom in get_geometry():
+                vis.add_geometry(geom, reset_bounding_box=False)
+
     # Create visualizer.
     key_to_callback = {}
     key_to_callback[ord("O")] = optimize
     key_to_callback[ord("A")] = add_new_frame
+    key_to_callback[ord("C")] = create_new_points
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 
 

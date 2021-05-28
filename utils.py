@@ -49,3 +49,13 @@ def convertToPoints(kps):
 
 def sorted_intersection(lst1, lst2):
     return sorted(list(set(lst1).intersection(lst2)))
+
+def return_unique_mask(arr):
+    remove_idx = []
+    unique_idx = []
+    for i,el in enumerate(arr):
+        if el in arr[i+1:]:
+            remove_idx.append(i)
+        else:
+            unique_idx.append(i)
+    return unique_idx
