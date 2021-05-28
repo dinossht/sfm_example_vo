@@ -5,6 +5,8 @@ from sfm_map import SfmMap
 from pylie import SE3
 
 
+# TODO: if more than three views, then add
+
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
         # Variable symbols for camera poses.
@@ -64,7 +66,6 @@ class BatchBundleAdjustment:
         # Set prior on landmarks
         for mp in sfm_map.get_map_points():
             point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 100)  # 0.1)
-            #factor = PriorFactorPoint3(L(mp.id()), np.reshape(mp.point_w(), (3,1)), point_noise)
             factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), point_noise)
             graph.push_back(factor)
 

@@ -306,3 +306,7 @@ class SFM_frontend:
             sfm_map.add_map_point(curr_map_point)
 
         return sfm_map
+    
+    def cull_bad_map_points(self, sfm_map):
+        for map_point in sfm_map.get_map_points():
+            map_point

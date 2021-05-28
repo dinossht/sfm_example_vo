@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 
 
+# TODO: use orbslam to find transformation-camera-body?
 # TODO: add undistort
 # TODO: remove bad map points
 
@@ -75,8 +76,7 @@ def main():
                 vis.add_geometry(geom, reset_bounding_box=False)
 
     def create_new_points(vis):
-            #sfm_map = 
-            sfm_frontend.create_new_map_points(sfm_map, 1, 2)
+            sfm_frontend.create_new_map_points(sfm_map, i-2, i-1) # last two frames
 
             vis.clear_geometries()
             for geom in get_geometry():
