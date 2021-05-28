@@ -267,7 +267,7 @@ class SFM_frontend:
         feat_track[1].set_points3d(points_0_obj.copy())
 
         # Filter depth
-        max_point_dist = 1e3  # NOTE: OBS here
+        max_point_dist = 100  # NOTE: OBS here
         depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]

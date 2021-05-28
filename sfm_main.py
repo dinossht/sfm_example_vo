@@ -8,7 +8,7 @@ import cv2
 
 
 # TODO: add undistort
-
+# TODO: remove bad map points
 
 i = 0
 N = 10
