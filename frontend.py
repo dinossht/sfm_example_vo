@@ -30,7 +30,7 @@ class Feature:
         idx1, idx2 = [], []
         good = []
         for m,n in matches:
-            if m.distance < 0.75 * n.distance:
+            if m.distance < 0.7 * n.distance:
                 idx1.append(m.queryIdx)
                 idx2.append(m.trainIdx)
                 good.append(m)
@@ -42,4 +42,5 @@ def recoverPose(pts_ref, pts_cur):
     T = np.eye(4)
     T[:3,:3] = R
     T[:3,3] = t.ravel()
+
     return T, inliers

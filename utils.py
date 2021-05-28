@@ -46,3 +46,6 @@ def convertToPoints(kps):
     for k in kps:
         pts.append(k.pt)
     return np.array(pts)
+
+def sorted_intersection(lst1, lst2):
+    return sorted(list(set(lst1).intersection(lst2)))

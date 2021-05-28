@@ -172,8 +172,8 @@ def initialize_map(frame_0, frame_1, frame_2):
     kf_1 = Keyframe(frame_1, pose_0_1)
     sfm_map.add_keyframe(kf_1)
     # Add third keyframe from relative pose.
-    kf_2 = Keyframe(frame_2, pose_0_2)
-    sfm_map.add_keyframe(kf_2)
+    #kf_2 = Keyframe(frame_2, pose_0_2)
+    #sfm_map.add_keyframe(kf_2)
 
     matched_frames = [frame_0, frame_1, frame_2]
     ids = np.array([id_0, id_1, id_2])
@@ -184,9 +184,9 @@ def initialize_map(frame_0, frame_1, frame_2):
     for i in range(num_points):
         
         curr_track = FeatureTrack()
-        curr_map_point = MapPoint(i, points_0_new[:, [i]])
+        curr_map_point = MapPoint(i, points_0_new[:, [i]], None, None)
 
-        for c in range(3):
+        for c in range(2):
             cam_ind = c
             det_id = ids[c, i]
             
@@ -199,8 +199,8 @@ def initialize_map(frame_0, frame_1, frame_2):
 
         sfm_map.add_map_point(curr_map_point)
 
-    for frame in matched_frames:
-        frame.update_covisible_frames()
+    #for frame in matched_frames:
+    #    frame.update_covisible_frames()
 
 
     """

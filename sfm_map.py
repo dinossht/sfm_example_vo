@@ -122,6 +122,9 @@ class MatchedFrame:
     def load_image(self):
         return cv2.cvtColor(cv2.imread(self._img_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
 
+    def load_image_grayscale(self):
+        return cv2.imread(self._img_path, cv2.IMREAD_GRAYSCALE)
+
     def add_keypoint(self, keypoint_id, keypoint):
         self._keypoints[keypoint_id] = keypoint
 
@@ -257,9 +260,11 @@ class Keyframe:
 
 
 class MapPoint:
-    def __init__(self, id, point_w):
+    def __init__(self, id, point_w, des, kps_raw):
         self._id = id
         self._point_w = point_w
+        self._des = des  # same as keypoint descriptor
+        self._kps_raw = kps_raw  # same as keypoint descriptor
         self._color = None
         self._observations = {}
         self._has_been_optimized = False
