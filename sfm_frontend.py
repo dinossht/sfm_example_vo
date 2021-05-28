@@ -1,12 +1,13 @@
 from sfm_map import SfmMap, Keyframe, MapPoint, KeyPoint, MatchedFrame, PerspectiveCamera, FeatureTrack
-from optimize import BatchBundleAdjustment
 from pylie import SO3, SE3
-import open3d as o3d
+
 
 from frontend import *
 from utils import *
 from sfm_frontend_utils import *
 
+
+# TODO: add undistort
 
 class UniquePoint3D:
     global_point_id = 0
@@ -91,7 +92,7 @@ class SFM_frontend:
 
         T_0_1, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
         pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
-        print(pose_0_1)
+        #print(pose_0_1)
 
         # Mask inliers kps
         feat_track[0].good_idxs = feat_track[0].good_idxs[inliers_mask.ravel()==1]
@@ -189,7 +190,7 @@ class SFM_frontend:
 
         points3d_map_matched = points3d_map[feat_track[0].good_idxs]
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
-        print(pose_0_2)
+        #print(pose_0_2)
 
         # Add keyframe to map
         kf = Keyframe(matched_frame, pose_0_2)
@@ -212,56 +213,83 @@ class SFM_frontend:
 
         return sfm_map
 
+    def create_new_map_points(self, frame_0, frame_1):  # keyframe 0 and keyframe 1
+        #pose is known
+        #triangulate using matching
+        # Load images
+        matched_frames = [frame_0._frame, frame_1._frame]
+        img0 = matched_frames[0].load_image_grayscale()
+        img1 = matched_frames[1].load_image_grayscale()
 
+        # Detect features
+        kp0, des0 = self.feature.detectAndCompute(img0)
+        kp1, des1 = self.feature.detectAndCompute(img1)
 
+        feat_track = [None] * 2
+        feat_track[0] = MyFeatTrack(kp0, des0)
+        feat_track[1] = MyFeatTrack(kp1, des1)
+        print(f"Num feat: {len(feat_track[0].good_idxs)}")
 
+        # Match features
+        good_idx0, good_idx1, _ = self.feature.goodMatches(des0, des1)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[good_idx0]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx1]
+        print(f"Num good match: {len(feat_track[0].good_idxs)}")
 
+        _, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
 
+        # Mask inliers kps
+        feat_track[0].good_idxs = feat_track[0].good_idxs[inliers_mask.ravel()==1]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[inliers_mask.ravel()==1]
+        print(f"Num inliers: {len(feat_track[0].good_idxs)}")
 
+        P_0 = matched_frames[0].camera_model().projection_matrix(frame_0.pose_w_c().inverse())
+        P_1 = matched_frames[1].camera_model().projection_matrix(frame_1.pose_w_c().inverse())
+        points_0 = triangulate_points_from_two_views(P_0, feat_track[0].good_kps().T, P_1, feat_track[1].good_kps().T)
 
-optimizer = BatchBundleAdjustment()
+        # Create 3d points with unique id
+        # Add 3d points to match feat0
+        points_0_obj = [UniquePoint3D(p) for p in points_0.T].copy()
+        feat_track[0].set_points3d(points_0_obj.copy())
+        feat_track[1].set_points3d(points_0_obj.copy())
 
-sfm_frontend = SFM_frontend()
+        # Filter depth
+        max_point_dist = 1e10  # NOTE: OBS here
+        depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
 
-img_path0 = "/home/dino/Code/masterproject/sfm_example_vo/my_data/img1.png"
-img_path1 = "/home/dino/Code/masterproject/sfm_example_vo/my_data/img10.png"
-sfm_map = sfm_frontend.initialize(img_path0, img_path1)
+        assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs)), f"unique indices check {len(set(feat_track[0].good_idxs))} vs {len(set(feat_track[1].good_idxs))}"
 
-img_path2 = "/home/dino/Code/masterproject/sfm_example_vo/my_data/img20.png"
-sfm_frontend.track_map(sfm_map, 2, img_path2)
+        sfm_map = SfmMap()
+        # Add first keyframe as reference frame.
+        kf_0 = Keyframe(matched_frames[0], frame_0.pose_w_c())
+        sfm_map.add_keyframe(kf_0)
+        # Add second keyframe from relative pose.
+        kf_1 = Keyframe(matched_frames[1], frame_1.pose_w_c())
+        sfm_map.add_keyframe(kf_1)
 
-def get_geometry():
-    poses = sfm_map.get_keyframe_poses()
-    p, c = sfm_map.get_pointcloud()
+        color_img = frame_0._frame.load_image()
 
-    axes = []
-    for pose in poses:
-        axes.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0).transform(pose.to_matrix()))
+        num_points = len(feat_track[0].good_idxs)
+        for i in range(num_points):
+            curr_track = FeatureTrack()
+            curr_map_point_id = feat_track[0].good_pts3d_w()[i].id
+            curr_map_point_coord = feat_track[0].good_pts3d_w()[i].point
+            curr_map_point_des = feat_track[0].good_des()[i]  # first frame is the keyframe, so add it's descriptor
+            curr_map_point_kps_raw = feat_track[0].good_kps_raw()[i]  # first frame is the keyframe, so add it's keypoint
+            curr_map_point = MapPoint(curr_map_point_id, curr_map_point_coord, curr_map_point_des, curr_map_point_kps_raw)
 
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(p.T)
-    pcd.colors = o3d.utility.Vector3dVector(c.T / 255)
+            for cam_ind in range(len(matched_frames)):
+                det_id = feat_track[cam_ind].good_idxs[i]
+                det_point = feat_track[cam_ind].good_kps()[i].reshape(2,1)
 
-    return [pcd] + axes
+                color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
 
-def optimize(vis):
-    points3d = np.array(list(sfm_map.get_map_points()))
-    points3d = np.array([p._point_w for p in points3d]).squeeze()
-    plt.scatter(points3d[:,0], points3d[:,2])
+                curr_track.add_observation(matched_frames[cam_ind], det_id)
+                matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
+                curr_map_point.add_observation(sfm_map.get_keyframe(cam_ind), det_id)
 
-    optimizer.full_bundle_adjustment_update(sfm_map)
-    
-    points3d = np.array(list(sfm_map.get_map_points()))
-    points3d = np.array([p._point_w for p in points3d]).squeeze()
-    plt.scatter(points3d[:,0], points3d[:,2])
-    plt.show()
+            sfm_map.add_map_point(curr_map_point)
 
-
-    vis.clear_geometries()
-    for geom in get_geometry():
-        vis.add_geometry(geom, reset_bounding_box=False)
-
-# Create visualizer.
-key_to_callback = {}
-key_to_callback[ord("O")] = optimize
-o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
+        return sfm_map
