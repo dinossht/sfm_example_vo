@@ -1,7 +1,5 @@
 from sfm_map import SfmMap, Keyframe, MapPoint, KeyPoint, MatchedFrame, PerspectiveCamera, FeatureTrack
 from pylie import SO3, SE3
-
-
 from frontend import *
 from utils import *
 from sfm_frontend_utils import *
