@@ -1,9 +1,11 @@
 import numpy as np
 import gtsam
-from gtsam import PriorFactorPoint3
+from gtsam import (PriorFactorPoint3, Marginals)
 from sfm_map import SfmMap
 from pylie import SE3
 from utils import *
+from gtsam.utils import plot
+import matplotlib.pyplot as plt
 
 
 # TODO: if more than three views, then add
@@ -90,6 +92,15 @@ class BatchBundleAdjustment:
         result = optimizer.optimize()
         print('initial error = {}'.format(graph.error(initial_estimate)))
         print('final error = {}'.format(graph.error(result)))
+
+        """
+        # Plot trajectory and marginals
+        marginals = Marginals(graph, result)
+        #plot.plot_3d_points(1, result, marginals=marginals)
+        plot.plot_trajectory(1, result)#, marginals=marginals, scale=8)
+        plot.set_axes_equal(1)
+        plt.show()
+        """
 
         # Update map with results.
         for keyframe in sfm_map.get_keyframes():
