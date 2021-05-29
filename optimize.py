@@ -3,6 +3,7 @@ import gtsam
 from gtsam import PriorFactorPoint3
 from sfm_map import SfmMap
 from pylie import SE3
+from utils import *
 
 
 # TODO: if more than three views, then add
@@ -38,6 +39,8 @@ class BatchBundleAdjustment:
                 factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
                                                               X(keyframe.id()), L(map_point.id()),
                                                               calibration)
+                error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
+                assert error < 10, str(error)
                 graph.push_back(factor)
 
         # Set prior on the first camera (which we will assume defines the reference frame).

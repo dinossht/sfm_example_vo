@@ -59,3 +59,11 @@ def return_unique_mask(arr):
         else:
             unique_idx.append(i)
     return unique_idx
+
+def camera_projection_X_to_uv(K, pose_c_w, X):
+    uv_hom = K @ pose_c_w.to_matrix()[:3, :] @ np.append(X, 1)
+    return uv_hom[:2]/uv_hom[-1]
+
+def uv_to_X_error(uv, K, pose_c_w, X_w):
+    uv_hat = camera_projection_X_to_uv(K, pose_c_w, X_w)
+    return np.linalg.norm(uv-uv_hat)

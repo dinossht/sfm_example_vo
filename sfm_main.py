@@ -54,8 +54,8 @@ def main():
         points3d = np.array([p._point_w for p in points3d]).squeeze()
         plt.scatter(points3d[:,0], points3d[:,2])
 
-        optimizer.full_bundle_adjustment_update(sfm_map)
-        # TODO: cull bad points
+        for _ in range(3):
+            optimizer.full_bundle_adjustment_update(sfm_map)
 
         points3d = np.array(list(sfm_map.get_map_points()))
         points3d = np.array([p._point_w for p in points3d]).squeeze()
@@ -67,13 +67,23 @@ def main():
         for geom in get_geometry():
             vis.add_geometry(geom, reset_bounding_box=False)
 
-    def add_new_frame(vis):
-            path, frame_id = next_frame_path()
-            sfm_frontend.track_map(sfm_map, frame_id, path)
+    def track_new_frame(vis):
+        points3d = np.array(list(sfm_map.get_map_points()))
+        points3d = np.array([p._point_w for p in points3d]).squeeze()
+        plt.scatter(points3d[:,0], points3d[:,2])
 
-            vis.clear_geometries()
-            for geom in get_geometry():
-                vis.add_geometry(geom, reset_bounding_box=False)
+        path, frame_id = next_frame_path()
+        sfm_frontend.track_map(sfm_map, frame_id, path)
+
+        points3d = np.array(list(sfm_map.get_map_points()))
+        points3d = np.array([p._point_w for p in points3d]).squeeze()
+        plt.scatter(points3d[:,0], points3d[:,2])
+        plt.show()
+
+
+        vis.clear_geometries()
+        for geom in get_geometry():
+            vis.add_geometry(geom, reset_bounding_box=False)
 
     def create_new_points(vis):
             sfm_frontend.create_new_map_points(sfm_map, i-2, i-1) # last two frames
@@ -88,11 +98,12 @@ def main():
         vis.clear_geometries()
         for geom in get_geometry():
             vis.add_geometry(geom, reset_bounding_box=False)
+    
     # Create visualizer.
     key_to_callback = {}
     key_to_callback[ord("O")] = optimize
-    key_to_callback[ord("A")] = add_new_frame
-    key_to_callback[ord("N")] = create_new_points
+    key_to_callback[ord("T")] = track_new_frame
+    key_to_callback[ord("C")] = create_new_points
     key_to_callback[ord("D")] = cull_bad_points
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 

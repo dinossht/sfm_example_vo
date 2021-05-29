@@ -131,6 +131,7 @@ class SFM_frontend:
 
         color_img = matched_frames[0].load_image()
 
+        latest_map_points = []
         num_points = len(feat_track[0].good_idxs)
         for i in range(num_points):
             curr_track = FeatureTrack()
@@ -150,8 +151,10 @@ class SFM_frontend:
                 matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
                 curr_map_point.add_observation(sfm_map.get_keyframe(cam_ind), det_id)
 
+            latest_map_points.append(curr_map_point)
             sfm_map.add_map_point(curr_map_point)
 
+        sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
 
     def track_map(self, sfm_map, frame_idx, img_path):
@@ -164,7 +167,8 @@ class SFM_frontend:
 
         # Extract map points
         des_map, kp_raw_map, points3d_map = [], [], []
-        for map_point in sfm_map.get_map_points():
+        #for map_point in sfm_map.get_map_points():
+        for map_point in sfm_map.get_latest_map_points():
             des_map.append(map_point._des)
             kp_raw_map.append(map_point._kps_raw)
             points3d_map.append(map_point.point_w())
@@ -198,6 +202,7 @@ class SFM_frontend:
         print(f"Num unique inliers: {len(feat_track[0].good_idxs)}")
 
         points3d_map_matched = points3d_map[feat_track[0].good_idxs]
+        map_points_matched = np.array(sfm_map.get_latest_map_points())[feat_track[0].good_idxs]
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
 
         # Add keyframe to map
@@ -205,18 +210,15 @@ class SFM_frontend:
         sfm_map.add_keyframe(kf)
 
         color_img = matched_frame.load_image()
-
+        cam_ind = matched_frame.id()
         num_points = len(points3d_map_matched)
-        for i,curr_map_point in enumerate(np.array(list(sfm_map.get_map_points()))[feat_track[0].good_idxs]):
-            curr_track = FeatureTrack()
-
-            cam_ind = matched_frame.id()
+        for i,curr_map_point in enumerate(map_points_matched):
             det_id = feat_track[1].good_idxs[i]
             det_point = feat_track[1].good_kps()[i].reshape(2,1)
             curr_map_point.add_observation(kf, det_id)
 
             color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
-            #curr_track.add_observation(matched_frames[cam_ind], det_id)
+            curr_track = FeatureTrack()
             matched_frame.add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
 
         return sfm_map
@@ -267,7 +269,7 @@ class SFM_frontend:
         feat_track[1].set_points3d(points_0_obj.copy())
 
         # Filter depth
-        max_point_dist = 100  # NOTE: OBS here
+        max_point_dist = 2000  # NOTE: OBS here
         depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
@@ -283,6 +285,7 @@ class SFM_frontend:
 
         color_img = kf_0._frame.load_image()
 
+        latest_map_points = []
         num_points = len(feat_track[0].good_idxs)
         for i in range(num_points):
             curr_track = FeatureTrack()
@@ -303,8 +306,10 @@ class SFM_frontend:
                 matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
                 curr_map_point.add_observation(kfs[cam_ind], det_id)
 
+            latest_map_points.append(curr_map_point)
             sfm_map.add_map_point(curr_map_point)
 
+        sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
     
     def cull_bad_map_points(self, sfm_map):
@@ -330,3 +335,10 @@ class SFM_frontend:
             if map_point.num_observations() < 3:
                 bad_map_point_ids.append(map_point.id())
         [sfm_map.remove_map_point(map_point_id) for map_point_id in bad_map_point_ids]
+
+        # Delete points from latest map points
+        bad_map_points = []
+        for map_point in sfm_map.get_latest_map_points():
+            if map_point.num_observations() < 3:
+                bad_map_points.append(map_point)
+        [sfm_map.remove_map_point_latest(map_point) for map_point in bad_map_points]

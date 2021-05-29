@@ -313,6 +313,26 @@ class SfmMap:
         self._map_points = {}
         self._newly_added_keyframes = []
         self._newly_added_map_points = []
+
+        self._cur_keyframe = None
+        self._latest_map_points = []
+
+
+    def set_latest_map_points(self, latest_map_points):
+        self._latest_map_points = latest_map_points
+
+    def remove_map_point_latest(self, map_point):
+        if map_point in self._latest_map_points:
+            self._latest_map_points.remove(map_point)
+
+    def get_latest_map_points(self):
+        return self._latest_map_points
+
+    def set_cur_keyframe(self, keyframe):
+        self._cur_keyframe = keyframe
+
+    def get_curr_keyframe(self):
+        return self._cur_keyframe
     
     def add_keyframe(self, keyframe):
         self._keyframes[keyframe.id()] = keyframe
