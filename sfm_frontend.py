@@ -308,5 +308,25 @@ class SFM_frontend:
         return sfm_map
     
     def cull_bad_map_points(self, sfm_map):
+        # Remove keyframe observations of map points
+        bad_observations = {}
+        for keyframe in sfm_map.get_keyframes():
+            bad_keypoint_ids = []
+            for keypoint_id, map_point in keyframe.get_observations().items():
+                # Less than three keyframe views
+                # too far away
+                # behind the camera
+                if map_point.num_observations() < 3:
+                    bad_keypoint_ids.append(keypoint_id)
+            bad_observations[keyframe.id()] = bad_keypoint_ids
+                    
+        for keyframe_id in bad_observations.keys():
+            for keypoint_id in bad_observations[keyframe_id]:
+                sfm_map.get_keyframe(keyframe_id).remove_map_point(keypoint_id)
+
+        # Delete points from map
+        bad_map_point_ids = []
         for map_point in sfm_map.get_map_points():
-            map_point
+            if map_point.num_observations() < 3:
+                bad_map_point_ids.append(map_point.id())
+        [sfm_map.remove_map_point(map_point_id) for map_point_id in bad_map_point_ids]

@@ -220,6 +220,9 @@ class Keyframe:
 
     def add_map_point(self, keypoint_id, map_point):
         self._map_points[keypoint_id] = map_point
+    
+    def remove_map_point(self, keypoint_id):
+        self._map_points.pop(keypoint_id)
 
     def get_map_point(self, keypoint_id):
         return self._map_points[keypoint_id]
@@ -299,6 +302,10 @@ class MapPoint:
     def get_observations(self):
         return self._observations
 
+    def num_observations(self):
+        return len(self.get_observing_keyframes())
+
+
 
 class SfmMap:
     def __init__(self):
@@ -306,7 +313,7 @@ class SfmMap:
         self._map_points = {}
         self._newly_added_keyframes = []
         self._newly_added_map_points = []
-
+    
     def add_keyframe(self, keyframe):
         self._keyframes[keyframe.id()] = keyframe
         self._newly_added_keyframes.append(keyframe)
@@ -314,6 +321,9 @@ class SfmMap:
     def add_map_point(self, map_point):
         self._map_points[map_point.id()] = map_point
         self._newly_added_map_points.append(map_point)
+
+    def remove_map_point(self, map_point_id):
+        self._map_points.pop(map_point_id)
 
     def has_been_updated(self):
         self._newly_added_keyframes = [kf for kf in self._newly_added_keyframes if not kf.has_been_optimized()]

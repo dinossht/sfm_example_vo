@@ -82,11 +82,18 @@ def main():
             for geom in get_geometry():
                 vis.add_geometry(geom, reset_bounding_box=False)
 
+    def cull_bad_points(vis):
+        sfm_frontend.cull_bad_map_points(sfm_map)
+
+        vis.clear_geometries()
+        for geom in get_geometry():
+            vis.add_geometry(geom, reset_bounding_box=False)
     # Create visualizer.
     key_to_callback = {}
     key_to_callback[ord("O")] = optimize
     key_to_callback[ord("A")] = add_new_frame
-    key_to_callback[ord("C")] = create_new_points
+    key_to_callback[ord("N")] = create_new_points
+    key_to_callback[ord("D")] = cull_bad_points
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 
 
