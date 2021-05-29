@@ -50,36 +50,28 @@ def main():
         return [pcd] + axes
 
     def optimize(vis):
+        """
         points3d = np.array(list(sfm_map.get_map_points()))
         points3d = np.array([p._point_w for p in points3d]).squeeze()
         plt.scatter(points3d[:,0], points3d[:,2])
+        """
 
         for _ in range(3):
             optimizer.full_bundle_adjustment_update(sfm_map)
 
+        """
         points3d = np.array(list(sfm_map.get_map_points()))
         points3d = np.array([p._point_w for p in points3d]).squeeze()
         plt.scatter(points3d[:,0], points3d[:,2])
         plt.show()
-
-
+        """
         vis.clear_geometries()
         for geom in get_geometry():
             vis.add_geometry(geom, reset_bounding_box=False)
 
     def track_new_frame(vis):
-        points3d = np.array(list(sfm_map.get_map_points()))
-        points3d = np.array([p._point_w for p in points3d]).squeeze()
-        plt.scatter(points3d[:,0], points3d[:,2])
-
         path, frame_id = next_frame_path()
         sfm_frontend.track_map(sfm_map, frame_id, path)
-
-        points3d = np.array(list(sfm_map.get_map_points()))
-        points3d = np.array([p._point_w for p in points3d]).squeeze()
-        plt.scatter(points3d[:,0], points3d[:,2])
-        plt.show()
-
 
         vis.clear_geometries()
         for geom in get_geometry():

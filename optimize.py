@@ -40,7 +40,7 @@ class BatchBundleAdjustment:
                                                               X(keyframe.id()), L(map_point.id()),
                                                               calibration)
                 error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
-                assert error < 10, str(error)
+                #assert error < 50, str(error)
                 graph.push_back(factor)
 
         # Set prior on the first camera (which we will assume defines the reference frame).
