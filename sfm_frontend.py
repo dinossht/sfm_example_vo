@@ -10,6 +10,7 @@ from sfm_frontend_utils import *
 MAX_DEPTH = 500
 MIN_DEPTH = 1
 MIN_NUM_OBS = 3
+FILT_DEPTH = True
 
 class UniquePoint3D:
     global_point_id = 0
@@ -69,7 +70,7 @@ class SFM_frontend:
         self.T_imu_c = np.array([
             [1, 0, 0, 0],
             [0, 1, 0, 0],
-            [0, 0, 1, 0],
+            [0, 0, 1, 100],
             [0, 0, 0, 1]
         ])
 
@@ -128,21 +129,22 @@ class SFM_frontend:
         feat_track[0].set_points3d(points_0_obj.copy())
         feat_track[1].set_points3d(points_0_obj.copy())
 
-        ## Filter depth, using kf0 and points given in its camera coordinate
-        T_c_w = pose0.inverse().to_matrix()
-        points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
+        if FILT_DEPTH:
+            ## Filter depth, using kf0 and points given in its camera coordinate
+            T_c_w = pose0.inverse().to_matrix()
+            points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
 
-        # Remove points with negative depth for kf_0
-        positive_depth_idxs = points_c[2,:] > MIN_DEPTH
+            # Remove points with negative depth for kf_0
+            positive_depth_idxs = points_c[2,:] > MIN_DEPTH
 
-        # Remove long distance points
-        max_depth_mask = points_c[2,:] < MAX_DEPTH
+            # Remove long distance points
+            max_depth_mask = points_c[2,:] < MAX_DEPTH
 
-        depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
-        feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
-        feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
-        print(f"Num good depth: {len(feat_track[0].good_idxs)}")
-        ##
+            depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
+            feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
+            feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
+            print(f"Num good depth: {len(feat_track[0].good_idxs)}")
+            ##
         
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
@@ -299,20 +301,21 @@ class SFM_frontend:
         feat_track[0].set_points3d(points_0_obj.copy())
         feat_track[1].set_points3d(points_0_obj.copy())
 
-        ## Filter depth, using kf0 and points given in its camera coordinate
-        T_c_w = kf_0.pose_w_c().inverse().to_matrix()
-        points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
+        if FILT_DEPTH:
+            ## Filter depth, using kf0 and points given in its camera coordinate
+            T_c_w = kf_0.pose_w_c().inverse().to_matrix()
+            points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
 
-        # Remove points with negative depth for kf_0
-        positive_depth_idxs = points_c[2,:] > MIN_DEPTH
+            # Remove points with negative depth for kf_0
+            positive_depth_idxs = points_c[2,:] > MIN_DEPTH
 
-        # Remove long distance points
-        max_depth_mask = points_c[2,:] < MAX_DEPTH
+            # Remove long distance points
+            max_depth_mask = points_c[2,:] < MAX_DEPTH
 
-        depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
-        feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
-        feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
-        ##
+            depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
+            feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
+            feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
+            ##
 
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
