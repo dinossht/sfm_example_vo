@@ -70,10 +70,10 @@ class BatchBundleAdjustment:
         # TODO: remove when three cameras are used to triangulate
         # Set prior on landmarks
         for mp in sfm_map.get_map_points():
-            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 100)  # 0.1)
+            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 0.1)  # 100)
             factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), point_noise)
             graph.push_back(factor)
-
+        
         # NOTE: Hard map point constraint
         for mp in sfm_map.get_map_points():
             no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)

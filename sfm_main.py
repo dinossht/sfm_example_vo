@@ -7,6 +7,8 @@ import numpy as np
 import cv2
 
 
+# NOTE: To run, click I on keyboard
+
 # TODO: use orbslam to find transformation-camera-body?
 # TODO: add undistort
 # TODO: remove bad map points, negative depth etc. check pyslam

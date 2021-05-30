@@ -273,7 +273,7 @@ class SFM_frontend:
         points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
 
         # Remove points with negative depth for kf_0
-        positive_depth_idxs = points_c[2,:] > 0
+        positive_depth_idxs = points_c[2,:] > 1  # min depth 
 
         # Remove long distance points
         max_depth_mask = points_0[2,:] < 500
