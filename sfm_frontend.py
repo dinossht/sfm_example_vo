@@ -3,12 +3,13 @@ from pylie import SO3, SE3
 from frontend import *
 from utils import *
 from sfm_frontend_utils import *
+from parameters import param
 
 
 # TODO: add undistort
 # TODO: remove bad map points
-MAX_DEPTH = 500
-MIN_DEPTH = 1
+MAX_DEPTH = 500 * param.VO_SCALE
+MIN_DEPTH = 1 * param.VO_SCALE
 MIN_NUM_OBS = 3
 FILT_DEPTH = True
 

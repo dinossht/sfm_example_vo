@@ -5,6 +5,7 @@ from sfm_map import SfmMap
 from pylie import SE3, SO3
 from utils import *
 import matplotlib.pyplot as plt
+from parameters import param
 
 
 # TODO: if more than three views, then add
@@ -55,7 +56,7 @@ class BatchBundleAdjustment:
 
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
-        prior_distance = 1.0
+        prior_distance = param.VO_SCALE
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
 
