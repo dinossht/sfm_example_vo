@@ -74,6 +74,12 @@ class BatchBundleAdjustment:
             factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), point_noise)
             graph.push_back(factor)
 
+        # NOTE: Hard map point constraint
+        for mp in sfm_map.get_map_points():
+            no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
+            factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
+            graph.push_back(factor)
+
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
         for keyframe in sfm_map.get_keyframes():
