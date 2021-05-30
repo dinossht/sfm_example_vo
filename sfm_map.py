@@ -116,6 +116,9 @@ class MatchedFrame:
         self._keypoints = {}
         self._frame_matches = {}
 
+        self.graph = None
+        self.result = None
+
     def id(self):
         return self._id
 

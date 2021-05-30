@@ -2,7 +2,7 @@ import numpy as np
 import gtsam
 from gtsam import (PriorFactorPoint3, Marginals)
 from sfm_map import SfmMap
-from pylie import SE3
+from pylie import SE3, SO3
 from utils import *
 from gtsam.utils import plot
 import matplotlib.pyplot as plt
@@ -47,7 +47,11 @@ class BatchBundleAdjustment:
 
         # Set prior on the first camera (which we will assume defines the reference frame).
         no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
-        factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
+        #factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
+        kf0_R = kf_0.pose_w_c()._rotation._matrix
+        kf0_t = kf_0.pose_w_c()._translation
+        kf0_pose = gtsam.Pose3(gtsam.Rot3(kf0_R), np.reshape(kf0_t,(3,1)))
+        factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose, no_uncertainty_in_pose)
         graph.push_back(factor)
 
         # Set prior on distance to next camera.
@@ -98,15 +102,9 @@ class BatchBundleAdjustment:
         result = optimizer.optimize()
         print('initial error = {}'.format(graph.error(initial_estimate)))
         print('final error = {}'.format(graph.error(result)))
+        sfm_map.graph = graph
+        sfm_map.result = result
 
-        """
-        # Plot trajectory and marginals
-        marginals = Marginals(graph, result)
-        #plot.plot_3d_points(1, result, marginals=marginals)
-        plot.plot_trajectory(1, result)#, marginals=marginals, scale=8)
-        plot.set_axes_equal(1)
-        plt.show()
-        """
 
         # Update map with results.
         for keyframe in sfm_map.get_keyframes():
