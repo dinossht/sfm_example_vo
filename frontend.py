@@ -6,9 +6,10 @@ from orbslam2_features import ORBextractor
 
 
 class Feature:
-    def __init__(self, num_features):
+    def __init__(self, num_features, lowes_ratio=0.7):
         self.orb2 = ORBextractor(num_features, 1.2, 8)  #num feat, scale, levels
         self.bf = cv.BFMatcher()
+        self.lowes_ratio = lowes_ratio
 
     def detectAndCompute(self, img):
         kps_tuples, des = self.orb2.detectAndCompute(img)
@@ -30,7 +31,7 @@ class Feature:
         idx1, idx2 = [], []
         good = []
         for m,n in matches:
-            if m.distance < 0.7 * n.distance:
+            if m.distance < self.lowes_ratio * n.distance:
                 idx1.append(m.queryIdx)
                 idx2.append(m.trainIdx)
                 good.append(m)

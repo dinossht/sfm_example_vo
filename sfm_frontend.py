@@ -55,8 +55,8 @@ class MyFeatTrack:
 
 
 class SFM_frontend:
-    def __init__(self, num_feat=2000):
-        self.feature = Feature(num_feat)
+    def __init__(self, num_feat=2000, lowes_ratio=0.7):
+        self.feature = Feature(num_feat, lowes_ratio)
 
         # Hardcoded
         self.f = np.array([[1.9954e+03, 1.9952e+03]]).T
@@ -89,6 +89,7 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx1]
         print(f"Num good match: {len(feat_track[0].good_idxs)}")
 
+        # Estimate pose 
         T_0_1, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
         pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
 
@@ -97,6 +98,7 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[inliers_mask.ravel()==1]
         print(f"Num inliers: {len(feat_track[0].good_idxs)}")
 
+        # Triangulate map points
         P_0 = matched_frames[0].camera_model().projection_matrix(SE3())
         P_1 = matched_frames[1].camera_model().projection_matrix(pose_0_1.inverse())
         points_0 = triangulate_points_from_two_views(P_0, feat_track[0].good_kps().T, P_1, feat_track[1].good_kps().T)
@@ -167,7 +169,6 @@ class SFM_frontend:
 
         # Extract map points
         des_map, kp_raw_map, points3d_map = [], [], []
-        #for map_point in sfm_map.get_map_points():
         for map_point in sfm_map.get_latest_map_points():
             des_map.append(map_point._des)
             kp_raw_map.append(map_point._kps_raw)
@@ -269,7 +270,7 @@ class SFM_frontend:
         feat_track[1].set_points3d(points_0_obj.copy())
 
         # Filter depth
-        max_point_dist = 2000  # NOTE: OBS here
+        max_point_dist = 500  # NOTE: OBS here
         depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
