@@ -25,7 +25,7 @@ def next_frame_path():
 def main():
     optimizer = BatchBundleAdjustment()
 
-    sfm_frontend = SFM_frontend(5000, 0.7)
+    sfm_frontend = SFM_frontend(2000, 0.7)
 
     # Add frame 0 and 10 to init
     path0, _ = next_frame_path()
