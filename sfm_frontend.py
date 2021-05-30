@@ -7,6 +7,9 @@ from sfm_frontend_utils import *
 
 # TODO: add undistort
 # TODO: remove bad map points
+MAX_DEPTH = 500
+MIN_DEPTH = 1
+MIN_NUM_OBS = 3
 
 class UniquePoint3D:
     global_point_id = 0
@@ -62,6 +65,13 @@ class SFM_frontend:
         self.f = np.array([[1.9954e+03, 1.9952e+03]]).T
         self.principal_point = np.array([[9.6550e+02, 6.0560e+02]]).T
         self.K = K
+        # Move camera to IMU origo
+        self.T_imu_c = np.array([
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1]
+        ])
 
     def initialize(self, img0_path, img1_path):
         print("Initializing")
@@ -93,15 +103,24 @@ class SFM_frontend:
         T_0_1, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
         pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
 
+        # Convert to IMU origo
+        T0 = self.T_imu_c @ SE3().to_matrix()
+        T1 = self.T_imu_c @ pose_0_1.to_matrix()
+        pose0 = SE3((SO3(T0[:3,:3]), T0[:3,3]))
+        pose1 = SE3((SO3(T1[:3,:3]), T1[:3,3]))
+
         # Mask inliers kps
         feat_track[0].good_idxs = feat_track[0].good_idxs[inliers_mask.ravel()==1]
         feat_track[1].good_idxs = feat_track[1].good_idxs[inliers_mask.ravel()==1]
         print(f"Num inliers: {len(feat_track[0].good_idxs)}")
 
         # Triangulate map points
-        P_0 = matched_frames[0].camera_model().projection_matrix(SE3())
-        P_1 = matched_frames[1].camera_model().projection_matrix(pose_0_1.inverse())
+        P_0 = matched_frames[0].camera_model().projection_matrix(pose0.inverse())
+        P_1 = matched_frames[1].camera_model().projection_matrix(pose1.inverse())
         points_0 = triangulate_points_from_two_views(P_0, feat_track[0].good_kps().T, P_1, feat_track[1].good_kps().T)
+
+        # Convert to ned
+        #points_0 = (self.T_imu_c @ add_ones(points_0.T).T)[:3,:]
 
         # Create 3d points with unique id
         # Add 3d points to match feat0
@@ -109,26 +128,38 @@ class SFM_frontend:
         feat_track[0].set_points3d(points_0_obj.copy())
         feat_track[1].set_points3d(points_0_obj.copy())
 
-        # Filter depth
-        max_point_dist = 100
-        depth_mask = np.logical_and(points_0[2,:]>0, points_0[2,:]<max_point_dist)
+        ## Filter depth, using kf0 and points given in its camera coordinate
+        T_c_w = pose0.inverse().to_matrix()
+        points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
+
+        # Remove points with negative depth for kf_0
+        positive_depth_idxs = points_c[2,:] > MIN_DEPTH
+
+        # Remove long distance points
+        max_depth_mask = points_c[2,:] < MAX_DEPTH
+
+        depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
         feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
         print(f"Num good depth: {len(feat_track[0].good_idxs)}")
-
+        ##
+        
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
         feat_track[0].good_idxs = feat_track[0].good_idxs[unique_idxs]
         feat_track[1].good_idxs = feat_track[1].good_idxs[unique_idxs]
         assert len(set(feat_track[0].good_idxs)) == len(set(feat_track[1].good_idxs))  # unique indices check
         print(f"Num unique: {len(feat_track[0].good_idxs)}")
+        
 
         sfm_map = SfmMap()
         # Add first keyframe as reference frame.
-        kf_0 = Keyframe(matched_frames[0], SE3())
+        #kf_0 = Keyframe(matched_frames[0], SE3())
+        kf_0 = Keyframe(matched_frames[0], pose0)
         sfm_map.add_keyframe(kf_0)
         # Add second keyframe from relative pose.
-        kf_1 = Keyframe(matched_frames[1], pose_0_1)
+        #kf_1 = Keyframe(matched_frames[1], pose_0_1)
+        kf_1 = Keyframe(matched_frames[1], pose1)
         sfm_map.add_keyframe(kf_1)
 
         color_img = matched_frames[0].load_image()
@@ -273,10 +304,10 @@ class SFM_frontend:
         points_c = (T_c_w @ add_ones(points_0.T).T)[:3,:]
 
         # Remove points with negative depth for kf_0
-        positive_depth_idxs = points_c[2,:] > 1  # min depth 
+        positive_depth_idxs = points_c[2,:] > MIN_DEPTH
 
         # Remove long distance points
-        max_depth_mask = points_0[2,:] < 500
+        max_depth_mask = points_c[2,:] < MAX_DEPTH
 
         depth_mask = np.logical_and(positive_depth_idxs, max_depth_mask)
         feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
@@ -330,7 +361,7 @@ class SFM_frontend:
                 # Less than three keyframe views
                 # too far away
                 # behind the camera
-                if map_point.num_observations() < 3:
+                if map_point.num_observations() < MIN_NUM_OBS:
                     bad_keypoint_ids.append(keypoint_id)
             bad_observations[keyframe.id()] = bad_keypoint_ids
                     
@@ -341,13 +372,13 @@ class SFM_frontend:
         # Delete points from map
         bad_map_point_ids = []
         for map_point in sfm_map.get_map_points():
-            if map_point.num_observations() < 3:
+            if map_point.num_observations() < MIN_NUM_OBS:
                 bad_map_point_ids.append(map_point.id())
         [sfm_map.remove_map_point(map_point_id) for map_point_id in bad_map_point_ids]
 
         # Delete points from latest map points
         bad_map_points = []
         for map_point in sfm_map.get_latest_map_points():
-            if map_point.num_observations() < 3:
+            if map_point.num_observations() < MIN_NUM_OBS:
                 bad_map_points.append(map_point)
         [sfm_map.remove_map_point_latest(map_point) for map_point in bad_map_points]

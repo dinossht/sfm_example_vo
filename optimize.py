@@ -1,10 +1,9 @@
 import numpy as np
 import gtsam
-from gtsam import (PriorFactorPoint3, Marginals)
+from gtsam import PriorFactorPoint3
 from sfm_map import SfmMap
 from pylie import SE3, SO3
 from utils import *
-from gtsam.utils import plot
 import matplotlib.pyplot as plt
 
 
