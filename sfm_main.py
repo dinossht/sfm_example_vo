@@ -119,7 +119,10 @@ def main():
             marginals = Marginals(sfm_map.graph, sfm_map.result)
             #plot.plot_3d_points(1, result, marginals=marginals)
             plot.plot_trajectory(1, sfm_map.result)#, marginals=marginals, scale=8)
-            plot.set_axes_equal(1)
+            plot.set_axes_equal(1)        
+            plt.figure()
+            last_path = sfm_map.get_keyframe(1)._frame._img_path
+            plt.imshow(cv2.cvtColor(cv2.imread(last_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB))
             plt.show()
 
     # Create visualizer.

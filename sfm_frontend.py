@@ -8,7 +8,7 @@ from parameters import param
 
 # TODO: add undistort
 # TODO: remove bad map points
-MAX_DEPTH = 1000 * param.VO_SCALE
+MAX_DEPTH = 10000 * param.VO_SCALE
 MIN_DEPTH = 1 * param.VO_SCALE
 MIN_NUM_OBS = 3
 FILT_DEPTH = True
