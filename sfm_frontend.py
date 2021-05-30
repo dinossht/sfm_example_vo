@@ -68,8 +68,8 @@ class SFM_frontend:
         self.K = K
         # Move camera to IMU origo
         self.T_imu_c = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
+            [1, 0, 0, 1000],
+            [0, 1, 0, -50],
             [0, 0, 1, 100],
             [0, 0, 0, 1]
         ])
