@@ -9,6 +9,7 @@ from parameters import param
 
 
 # TODO: if more than three views, then add
+ADD_HARD_LANDMARK_PRIOR = True
 
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
@@ -71,19 +72,21 @@ class BatchBundleAdjustment:
             point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 100)  # 0.1)
             factor = PriorFactorPoint3(L(i), point3d_list[i], point_noise)
             graph.push_back(factor)
-        """
+
         # TODO: remove when three cameras are used to triangulate
         # Set prior on landmarks
         for mp in sfm_map.get_map_points():
             point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 0.1)  # 100)
             factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), point_noise)
             graph.push_back(factor)
+        """
         
-        # NOTE: Hard map point constraint
-        for mp in sfm_map.get_map_points():
-            no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
-            factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
-            graph.push_back(factor)
+        if ADD_HARD_LANDMARK_PRIOR:
+            # NOTE: Hard map point constraint
+            for mp in sfm_map.get_map_points():
+                no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
+                factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
+                graph.push_back(factor)
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
