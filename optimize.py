@@ -9,7 +9,7 @@ from parameters import param
 
 
 # TODO: if more than three views, then add
-ADD_HARD_LANDMARK_PRIOR = False#True
+ADD_HARD_LANDMARK_PRIOR = True
 
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):

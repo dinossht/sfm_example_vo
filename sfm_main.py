@@ -20,7 +20,7 @@ import cv2
 
 i = 0
 N = 10
-off = 600
+off = 200
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
