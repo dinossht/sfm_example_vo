@@ -31,18 +31,34 @@ class BatchBundleAdjustment:
         # so we will assume a common observation uncertainty of 3 pixels in u and v directions.
         obs_uncertainty = gtsam.noiseModel.Isotropic.Sigma(2, 3.0) #(2, 3.0)
 
+        
+
+        """
         # Add measurements.
         for keyframe in sfm_map.get_keyframes():
             for keypoint_id, map_point in keyframe.get_observations().items():
                 assert len(map_point.get_observations()) >= 2, "Less than two camera views"
                 obs_point = keyframe.get_keypoint(keypoint_id).point()
-                factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
-                                                              X(keyframe.id()), L(map_point.id()),
-                                                              calibration)
-                error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
+                #factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
+                #                                              X(keyframe.id()), L(map_point.id()),
+                #                                              calibration)
+                smart_factor = gtsam.SmartProjectionPose3Factor(obs_uncertainty, calibration)
+                smart_factor.add(obs_point, X(keyframe.id()))
+                #error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
                 #assert error < 50, str(error)
-                graph.push_back(factor)
+                #graph.push_back(factor)
+                graph.push_back(smart_factor)
+        """
 
+        # Add measurements.
+        for map_point in sfm_map.get_map_points():
+            smart_factor = gtsam.SmartProjectionPose3Factor(obs_uncertainty, calibration)
+            for keyframe in map_point.get_observations():
+                keypoint_id = map_point.get_observation_keypoint_id(keyframe)
+                obs_point = keyframe.get_keypoint(keypoint_id).point()
+                smart_factor.add(obs_point, X(keyframe.id()))
+                graph.push_back(smart_factor)
+                
         # Set prior on the first camera (which we will assume defines the reference frame).
         no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
         #factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
@@ -64,9 +80,11 @@ class BatchBundleAdjustment:
             pose_w_c = gtsam.Pose3(keyframe.pose_w_c().to_matrix())
             initial_estimate.insert(X(keyframe.id()), pose_w_c)
 
+        """
         for map_point in sfm_map.get_map_points():
             point_w = gtsam.Point3(map_point.point_w().squeeze())
             initial_estimate.insert(L(map_point.id()), point_w)
+        """
 
         # Optimize the graph.
         params = gtsam.LevenbergMarquardtParams()
@@ -84,9 +102,11 @@ class BatchBundleAdjustment:
             updated_pose_w_c = result.atPose3(X(keyframe.id()))
             keyframe.update_pose_w_c(SE3.from_matrix(updated_pose_w_c.matrix()))
 
+        """
         for map_point in sfm_map.get_map_points():
             updated_point_w = result.atPoint3(L(map_point.id())).reshape(3, 1)
             map_point.update_point_w(updated_point_w)
+        """
 
         sfm_map.has_been_updated()
 
