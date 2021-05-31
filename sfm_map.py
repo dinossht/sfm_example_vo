@@ -291,6 +291,9 @@ class MapPoint:
     def color(self):
         return self._color
 
+    def get_observation_keypoint_id(self, keyframe):
+        return self._observations[keyframe]
+
     def add_observation(self, keyframe, keypoint_id):
         self._observations[keyframe] = keypoint_id
         keyframe.add_map_point(keypoint_id, self)
