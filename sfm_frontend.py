@@ -6,8 +6,6 @@ from sfm_frontend_utils import *
 from parameters import param
 
 
-# TODO: add undistort
-# TODO: remove bad map points
 MAX_DEPTH = 10000 * param.VO_SCALE
 MIN_DEPTH = 1 * param.VO_SCALE
 MIN_NUM_OBS = 3
@@ -164,6 +162,12 @@ class SFM_frontend:
         #kf_1 = Keyframe(matched_frames[1], pose_0_1)
         kf_1 = Keyframe(matched_frames[1], pose1)
         sfm_map.add_keyframe(kf_1)
+
+        # Calculate initial yaw angle offset
+        heading_vector = kf_1.pose_w_c().translation - kf_0.pose_w_c().translation
+        heading_vector[:2] = 0
+        reference_vector = np.array([[0], [0], [1]])  # initially pointing forward with z
+        print(f"Init camera yaw mount offset: {180 * np.arccos(np.dot(heading_vector, reference_vector[:, 0])) / np.pi}")
 
         color_img = matched_frames[0].load_image()
 

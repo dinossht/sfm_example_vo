@@ -14,11 +14,12 @@ import cv2
 # TODO: use orbslam to find transformation-camera-body?
 # TODO: add undistort
 # TODO: remove bad map points, negative depth etc. check pyslam
+# TODO: plott feature matching
 
 
 i = 0
 N = 10
-off = 0
+off = 100
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
