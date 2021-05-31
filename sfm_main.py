@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 
 
+# TODO: add parallax angle check
 # NOTE: To run, click I on keyboard
 
 # TODO: use orbslam to find transformation-camera-body?
@@ -19,7 +20,7 @@ import cv2
 
 i = 0
 N = 10
-off = 200
+off = 600
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
@@ -35,6 +36,8 @@ def main():
     # Add frame 0 and 1 to init
     path0, _ = next_frame_path()
     path1, _ = next_frame_path()
+    #path0 = "car_data/img0.png"
+    #path1 = "car_data/img1.png"
     sfm_map = sfm_frontend.initialize(path0, path1)
 
     # Track a new frame

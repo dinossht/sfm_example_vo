@@ -9,7 +9,7 @@ from parameters import param
 
 
 # TODO: if more than three views, then add
-ADD_HARD_LANDMARK_PRIOR = True
+ADD_HARD_LANDMARK_PRIOR = False#True
 
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
@@ -56,11 +56,20 @@ class BatchBundleAdjustment:
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose, no_uncertainty_in_pose)
         graph.push_back(factor)
 
+        
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
         prior_distance = param.VO_SCALE
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
+        
+        """
+        # Prior on first landmark
+        no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
+        mp = list(sfm_map.get_map_points())[0]
+        factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
+        graph.push_back(factor)
+        """
 
         """
         print("some times, depending on num keyframes, and initializing, system can become ill determined")
