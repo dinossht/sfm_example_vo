@@ -36,6 +36,7 @@ class BatchBundleAdjustment:
         # Add measurements.
         for keyframe in sfm_map.get_keyframes():
             for keypoint_id, map_point in keyframe.get_observations().items():
+                assert len(map_point.get_observations()) >= 2, "Less than two camera views"
                 # TODO: if more than three views, then add
                 obs_point = keyframe.get_keypoint(keypoint_id).point()
                 factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,

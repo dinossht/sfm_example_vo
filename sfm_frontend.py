@@ -25,8 +25,8 @@ class MyFeatTrack:
     def __init__(self, kps, des):
         self.des = des
         self.kps_raw = kps
-        self.kps = convertToPoints(kps)
-        self.kps_n = undistort_normalize(self.kps)
+        self.kps = undistort(convertToPoints(kps))
+        self.kps_n = normalize(self.kps)
 
         self.num_kps = len(kps)
 
@@ -185,7 +185,10 @@ class SFM_frontend:
                 det_id = feat_track[cam_ind].good_idxs[i]
                 det_point = feat_track[cam_ind].good_kps()[i].reshape(2,1)
 
-                color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+                if int(det_point[1]) < color_img.shape[0] and int(det_point[1]) >= 0 and int(det_point[0]) >= 0 and int(det_point[0]) < color_img.shape[1]:
+                    color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+                else:
+                    color = np.zeros((3,1))
 
                 curr_track.add_observation(matched_frames[cam_ind], det_id)
                 matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
@@ -255,7 +258,11 @@ class SFM_frontend:
             det_point = feat_track[1].good_kps()[i].reshape(2,1)
             curr_map_point.add_observation(kf, det_id)
 
-            color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+            if int(det_point[1]) < color_img.shape[0] and int(det_point[1]) >= 0 and int(det_point[0]) >= 0 and int(det_point[0]) < color_img.shape[1]:
+                color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+            else:
+                color = np.zeros((3,1))
+                
             curr_track = FeatureTrack()
             matched_frame.add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
 
@@ -348,7 +355,10 @@ class SFM_frontend:
                 det_id = feat_track[cam_ind].good_idxs[i]
                 det_point = feat_track[cam_ind].good_kps()[i].reshape(2,1)
 
-                color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+                if int(det_point[1]) < color_img.shape[0] and int(det_point[1]) >= 0 and int(det_point[0]) >= 0 and int(det_point[0]) < color_img.shape[1]:
+                    color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
+                else:
+                    color = np.zeros((3,1))
 
                 curr_track.add_observation(matched_frames[cam_ind], det_id)
                 matched_frames[cam_ind].add_keypoint(det_id, KeyPoint(det_point, color, curr_track))

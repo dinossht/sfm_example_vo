@@ -8,6 +8,7 @@ def triangulate_points_from_two_views(P_0, kp_0: np.ndarray,
                                       P_1, kp_1: np.ndarray):
     # Triangulate wrt frame 0.
     points_hom = cv2.triangulatePoints(P_0, P_1, kp_0, kp_1)
+    assert np.sum(points_hom[-1, :] != 0) != 0, "division by zero somewhere"
     return points_hom[:-1, :] / points_hom[-1, :]
 
 def estimate_pose_from_map_correspondences(K, kp: np.ndarray, points_w: np.ndarray):
