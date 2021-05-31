@@ -8,9 +8,6 @@ import matplotlib.pyplot as plt
 from parameters import param
 
 
-# TODO: if more than three views, then add
-ADD_HARD_LANDMARK_PRIOR = True
-
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
         # Variable symbols for camera poses.
@@ -38,7 +35,6 @@ class BatchBundleAdjustment:
         for keyframe in sfm_map.get_keyframes():
             for keypoint_id, map_point in keyframe.get_observations().items():
                 assert len(map_point.get_observations()) >= 2, "Less than two camera views"
-                # TODO: if more than three views, then add
                 obs_point = keyframe.get_keypoint(keypoint_id).point()
                 factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
                                                               X(keyframe.id()), L(map_point.id()),
@@ -55,47 +51,12 @@ class BatchBundleAdjustment:
         kf0_pose = gtsam.Pose3(gtsam.Rot3(kf0_R), np.reshape(kf0_t,(3,1)))
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose, no_uncertainty_in_pose)
         graph.push_back(factor)
-
         
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
         prior_distance = param.VO_SCALE
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
-        
-        """
-        # Prior on first landmark
-        no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
-        mp = list(sfm_map.get_map_points())[0]
-        factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
-        graph.push_back(factor)
-        """
-
-        """
-        print("some times, depending on num keyframes, and initializing, system can become ill determined")
-        print("solution add gps priors for eks")
-        # TODO: remove when three cameras are used to triangulate
-        # Set prior on landmarks
-        point3d_list = [p._point_w for p in list(sfm_map.get_map_points())]
-        for i in range(len(point3d_list)):
-            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 100)  # 0.1)
-            factor = PriorFactorPoint3(L(i), point3d_list[i], point_noise)
-            graph.push_back(factor)
-
-        # TODO: remove when three cameras are used to triangulate
-        # Set prior on landmarks
-        for mp in sfm_map.get_map_points():
-            point_noise = gtsam.noiseModel.Isotropic.Sigma(3, 0.1)  # 100)
-            factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), point_noise)
-            graph.push_back(factor)
-        """
-        
-        if ADD_HARD_LANDMARK_PRIOR:
-            # NOTE: Hard map point constraint
-            for mp in sfm_map.get_map_points():
-                no_uncertainty_in_point = gtsam.noiseModel.Constrained.All(3)
-                factor = PriorFactorPoint3(L(mp.id()), mp.point_w(), no_uncertainty_in_point)
-                graph.push_back(factor)
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
@@ -108,16 +69,15 @@ class BatchBundleAdjustment:
             initial_estimate.insert(L(map_point.id()), point_w)
 
         # Optimize the graph.
-        params = gtsam.GaussNewtonParams()
+        params = gtsam.LevenbergMarquardtParams()
         params.setVerbosity('TERMINATION')
-        optimizer = gtsam.GaussNewtonOptimizer(graph, initial_estimate, params)
+        optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial_estimate, params)
         print('Optimizing:')
         result = optimizer.optimize()
         print('initial error = {}'.format(graph.error(initial_estimate)))
         print('final error = {}'.format(graph.error(result)))
         sfm_map.graph = graph
         sfm_map.result = result
-
 
         # Update map with results.
         for keyframe in sfm_map.get_keyframes():

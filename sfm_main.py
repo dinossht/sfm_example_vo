@@ -9,18 +9,19 @@ import numpy as np
 import cv2
 
 
+# TODO: add smart projection factor/smart factor to solve bad map points
 # TODO: add parallax angle check
+
 # NOTE: To run, click I on keyboard
 
 # TODO: use orbslam to find transformation-camera-body?
-# TODO: add undistort
 # TODO: remove bad map points, negative depth etc. check pyslam
 # TODO: plott feature matching
 
 
 i = 0
 N = 10
-off = 200
+off = 0
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
