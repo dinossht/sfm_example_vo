@@ -4,8 +4,8 @@ from frontend import *
 from pylie import SO3, SE3
    
 i = 0
-N = 10
-off = 300
+N = 20
+off = 0
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
@@ -38,7 +38,7 @@ class MyFeatTrack:
 
 class calibrate:
     def __init__(self):
-        self.feature = Feature(2000, 0.7)
+        self.feature = Feature(5000, 0.7)
         self.NUM_ITER = 50
    
     def initialize(self):
