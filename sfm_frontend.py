@@ -6,11 +6,12 @@ from sfm_frontend_utils import *
 from parameters import param
 
 
-MAX_DEPTH = 100 * param.VO_SCALE
-MIN_DEPTH = 1 * param.VO_SCALE
+MAX_DEPTH = 10000 * param.VO_SCALE
+MIN_DEPTH = 0 * param.VO_SCALE
 MIN_NUM_OBS = 3
 MAX_PIXEL_ERR = 5
 FILT_DEPTH = True
+cos_max_parallax = 0.999999
 
 class UniquePoint3D:
     global_point_id = 0
@@ -166,6 +167,25 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_mask]
         assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
         print(f"Num after pixel error: {len(feat_track[0].good_idxs)}")
+
+        # Parallax filter
+        # Compute back-projected rays (unit vectors) 
+        rays1 = np.dot(pose0._rotation._matrix, add_ones(feat_track[0].good_kps_n()).T).T  # vector from keyframe origin to normalized point given in world frame
+        norm_rays1 = np.linalg.norm(rays1, axis=-1, keepdims=True)                  
+        rays1 /= norm_rays1                      
+
+        rays2 = np.dot(pose1._rotation._matrix, add_ones(feat_track[1].good_kps_n()).T).T  # vector from keyframe origin to normalized point given in world frame
+        norm_rays2 = np.linalg.norm(rays2, axis=-1, keepdims=True)  
+        rays2 /= norm_rays2 
+
+        # Compute dot products of rays. a dot b = |a|*|b|*cos(angle) = 1*1*cos(angle)
+        cos_parallaxs = np.sum(rays1 * rays2, axis=1)  
+        # Max parallax is almost 180 degrees, and min parallax angle is almost 0 degrees
+        good_cos_parallaxs = np.logical_and(cos_parallaxs > 0, cos_parallaxs < cos_max_parallax)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[good_cos_parallaxs]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[good_cos_parallaxs]
+        assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
+        print(f"Num after parallax filt: {len(feat_track[0].good_idxs)}")
 
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
@@ -369,6 +389,26 @@ class SFM_frontend:
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_mask]
         assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
         print(f"Num after pixel error: {len(feat_track[0].good_idxs)}")
+
+        # Parallax filter
+        # Compute back-projected rays (unit vectors) 
+
+        rays1 = np.dot(kf_0.pose_w_c()._rotation._matrix, add_ones(feat_track[0].good_kps_n()).T).T  # vector from keyframe origin to normalized point given in world frame
+        norm_rays1 = np.linalg.norm(rays1, axis=-1, keepdims=True)                  
+        rays1 /= norm_rays1                      
+
+        rays2 = np.dot(kf_1.pose_w_c()._rotation._matrix, add_ones(feat_track[1].good_kps_n()).T).T  # vector from keyframe origin to normalized point given in world frame
+        norm_rays2 = np.linalg.norm(rays2, axis=-1, keepdims=True)  
+        rays2 /= norm_rays2 
+
+        # Compute dot products of rays. a dot b = |a|*|b|*cos(angle) = 1*1*cos(angle)
+        cos_parallaxs = np.sum(rays1 * rays2, axis=1)  
+        # Max parallax is almost 180 degrees, and min parallax angle is almost 0 degrees
+        good_cos_parallaxs = np.logical_and(cos_parallaxs > 0, cos_parallaxs < cos_max_parallax)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[good_cos_parallaxs]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[good_cos_parallaxs]
+        assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
+        print(f"Num after parallax filt: {len(feat_track[0].good_idxs)}")
 
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
