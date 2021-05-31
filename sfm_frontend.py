@@ -6,9 +6,10 @@ from sfm_frontend_utils import *
 from parameters import param
 
 
-MAX_DEPTH = 10000 * param.VO_SCALE
+MAX_DEPTH = 100 * param.VO_SCALE
 MIN_DEPTH = 1 * param.VO_SCALE
 MIN_NUM_OBS = 3
+MAX_PIXEL_ERR = 5
 FILT_DEPTH = True
 
 class UniquePoint3D:
@@ -128,6 +129,8 @@ class SFM_frontend:
         feat_track[0].set_points3d(points_0_obj.copy())
         feat_track[1].set_points3d(points_0_obj.copy())
 
+   
+
         if FILT_DEPTH:
             ## Filter depth, using kf0 and points given in its camera coordinate
             T_c_w = pose0.inverse().to_matrix()
@@ -144,7 +147,26 @@ class SFM_frontend:
             feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
             print(f"Num good depth: {len(feat_track[0].good_idxs)}")
             ##
-        
+    
+        # Reprojection error
+        pt3d_h0 = add_ones(feat_track[0].get_plot_points3d().squeeze())
+        uv_hat0 = P_0 @ pt3d_h0.T
+        uv_hat0 = (uv_hat0[:2]/uv_hat0[-1]).T
+        uv0 = feat_track[0].good_kps()
+
+        pt3d_h1 = add_ones(feat_track[1].get_plot_points3d().squeeze())
+        uv_hat1 = P_1 @ pt3d_h1.T
+        uv_hat1 = (uv_hat1[:2]/uv_hat1[-1]).T
+        uv1 = feat_track[1].good_kps()
+
+        good0 = np.linalg.norm(uv0-uv_hat0, axis=1) < MAX_PIXEL_ERR
+        good1 = np.linalg.norm(uv1-uv_hat1, axis=1) < MAX_PIXEL_ERR
+        good_mask = np.logical_and(good0, good1)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[good_mask]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[good_mask]
+        assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
+        print(f"Num after pixel error: {len(feat_track[0].good_idxs)}")
+
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
         feat_track[0].good_idxs = feat_track[0].good_idxs[unique_idxs]
@@ -262,7 +284,7 @@ class SFM_frontend:
                 color = np.reshape(color_img[int(det_point[1]), int(det_point[0])], (3,1))
             else:
                 color = np.zeros((3,1))
-                
+
             curr_track = FeatureTrack()
             matched_frame.add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
 
@@ -328,6 +350,25 @@ class SFM_frontend:
             feat_track[0].good_idxs = feat_track[0].good_idxs[depth_mask]
             feat_track[1].good_idxs = feat_track[1].good_idxs[depth_mask]
             ##
+
+        # Reprojection error
+        pt3d_h0 = add_ones(feat_track[0].get_plot_points3d().squeeze())
+        uv_hat0 = P_0 @ pt3d_h0.T
+        uv_hat0 = (uv_hat0[:2]/uv_hat0[-1]).T
+        uv0 = feat_track[0].good_kps()
+
+        pt3d_h1 = add_ones(feat_track[1].get_plot_points3d().squeeze())
+        uv_hat1 = P_1 @ pt3d_h1.T
+        uv_hat1 = (uv_hat1[:2]/uv_hat1[-1]).T
+        uv1 = feat_track[1].good_kps()
+
+        good0 = np.linalg.norm(uv0-uv_hat0, axis=1) < MAX_PIXEL_ERR
+        good1 = np.linalg.norm(uv1-uv_hat1, axis=1) < MAX_PIXEL_ERR
+        good_mask = np.logical_and(good0, good1)
+        feat_track[0].good_idxs = feat_track[0].good_idxs[good_mask]
+        feat_track[1].good_idxs = feat_track[1].good_idxs[good_mask]
+        assert len(feat_track[0].good_idxs) == len(feat_track[1].good_idxs)  # unique indices check
+        print(f"Num after pixel error: {len(feat_track[0].good_idxs)}")
 
         # Filter non-unique idxs
         unique_idxs = return_unique_mask(feat_track[1].good_idxs)
