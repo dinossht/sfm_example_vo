@@ -5,7 +5,7 @@ from pylie import SO3, SE3
    
 i = 0
 N = 10
-off = 100
+off = 300
 def next_frame_path():
     global i, N, off
     path = f"kaia_data/frame_id_{off + i * N}.png"
@@ -38,8 +38,8 @@ class MyFeatTrack:
 
 class calibrate:
     def __init__(self):
-        self.feature = Feature(50, 0.7)
-        self.NUM_ITER = 500
+        self.feature = Feature(2000, 0.7)
+        self.NUM_ITER = 50
    
     def initialize(self):
         # Load images
@@ -49,6 +49,8 @@ class calibrate:
         img1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
 
         headings = []
+        yaws = []
+        rolls = []
         for it in range(self.NUM_ITER):
             # Detect features
             kp0, des0 = self.feature.detectAndCompute(img0)
@@ -74,9 +76,31 @@ class calibrate:
             reference_vector = np.array([[0], [0], [1]])  # initially pointing forward with z
             heading = 180 * np.arccos(np.dot(heading_vector, reference_vector[:, 0])) / np.pi
             headings.append(heading)
+
+            # Calculate initial yaw angle offset
+            yaw_vector = np.zeros((3,))
+            yaw_vector[1] = pose_0_1.translation[1]
+            reference_vector = np.array([[0], [1], [0]])  # initially pointing forward with z
+            yaw = 180 * np.arccos(np.dot(yaw_vector, reference_vector[:, 0])) / np.pi
+            yaws.append(yaw)
+
+            # Calculate initial pitch angle offset
+            roll_vector = np.zeros((3,))
+            roll_vector[1] = pose_0_1.translation[0]
+            reference_vector = np.array([[1], [0], [0]])  # initially pointing forward with z
+            roll = 180 * np.arccos(np.dot(roll_vector, reference_vector[:, 0])) / np.pi
+            rolls.append(roll)
             print(it)
-        plt.hist(headings)
-        print(np.mean(headings))
+
+        plt.subplot(311)
+        plt.hist(headings, bins=100, range=(0, 20))
+        plt.subplot(312)
+        plt.hist(yaws, bins=100, range=(90-3, 90+3))
+        plt.subplot(313)
+        plt.hist(rolls, bins=100, range=(90-3, 90+3))
+        print(np.median(headings))
+        print(np.median(yaws))
+        print(np.median(rolls))
         plt.show()
     
 c = calibrate()
