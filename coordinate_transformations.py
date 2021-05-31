@@ -20,13 +20,13 @@ R_zxy_xyz = np.array([
     [1, 0, 0]])
 
 print("Array x vector given in IMU, this can be ferries forward acceleration:\t", end="")
-xVec_imu = np.array([1.0000, 0.0000, 0.0000])
+xVec_imu = np.array([3.60000, 0.10000, -1.3400])  # camera origo given in imu
 print(xVec_imu)
 
-R_cam_imu = R_zxy_xyz @ R_z(-8.303)
+R_cam_imu = R_zxy_xyz @ R_z(-13)
 print("Same vector given in camera: \t\t\t\t\t\t", end="")
-print("Use this to rotate IMU acc data and euler angles")
 print(R_cam_imu @ xVec_imu)
+print("Use this to rotate IMU acc data and euler angles")
 
 # RTK origo given in IMU 
 rtkOrigo_imu = np.array([-0.025, 0.1, 0.06])
