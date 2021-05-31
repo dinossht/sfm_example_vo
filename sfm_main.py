@@ -9,6 +9,7 @@ import numpy as np
 import cv2
 
 
+# TODO: add prior factor for pose based on constant vel motion model
 # TODO: add smart projection factor/smart factor to solve bad map points
 # TODO: add parallax angle check
 
@@ -20,7 +21,7 @@ import cv2
 
 
 i = 0
-N = 10
+N = 10#20
 off = 0
 def next_frame_path():
     global i, N, off

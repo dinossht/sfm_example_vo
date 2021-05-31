@@ -1,0 +1,42 @@
+!!! OBS! SOMETHING WRONG WITH BAG 2 data and or estimates!!!
+
+
+- These are data from day 2
+- X in obsv_estimates (X).mat denotes trip number
+- Time is in GPS-time
+- ROS time is delayed for about 18.3 seconds for trip 2
+- p_Lb_L_hat is NED-position, and alle data have standard units
+- delays for day 2: 
+     [18.24,18.33,18.42,18.54] for tur 1-4 dag 2
+
+
+- obsv_estimates (1).mat duration 1017.9298; time delay 18.24
+- obsv_estimates (2).mat duration 829.3980; time delay 18.33
+- obsv_estimates (3).mat duration 730.3831; time delay 18.42
+- obsv_estimates (3).mat duration 918.8293; time delay 18.54
+
+=========================================================
+La merke til baggene fra dag 2 hadde følgende varigheter:
+=========================================================
+trondheim1__inn.bag: 1018.008054
+trondheim2__inn.bag: 925.418615  
+trondheim3__inn.bag: 730.449544
+trondheim4__inn.bag: 918.878096
+
+og estimatene hadde dette:
+obsv_estimates (1): 1017.9298
+obsv_estimates (2): 829.3980
+obsv_estimates (3): 730.3831
+obsv_estimates (4): 918.8293
+
+time delay:
+1: 18.24
+2: 18.33
+3: 18.42
+4: 18.54
+
+NED origin for ground-truth data is defined in ned_origin.mat
+
+
+
+ 

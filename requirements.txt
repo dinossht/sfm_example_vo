@@ -1,6 +1,10 @@
 https://github.com/tussedrotten/pylie/archive/v0.4.0.zip
 gtsam
-opencv-python-headless
+#opencv-python-headless
 pyqt5
 open3d
 matplotlib
+--extra-index-url https://rospypi.github.io/simple/ 
+rospy
+--extra-index-url https://rospypi.github.io/simple/ 
+rosbag
