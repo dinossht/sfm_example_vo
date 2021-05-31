@@ -1,6 +1,7 @@
 import os
 import scipy.io
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 
 class GroundTruth:
@@ -29,6 +30,15 @@ class ROSGroundTruth:
         x, y, z = self.tvecs[i]
         roll, pitch, yaw = self.eulers[i]
         return GroundTruth(x, y, z, roll, pitch, yaw)
+
+    def get_T(self, timestamp):
+        g = self.get_xyz(timestamp)
+        Rot = R.from_euler("zyx", [g.yaw, g.pitch, g.roll], degrees=False).as_matrix()
+        t = np.array([g.x, g.y, g.z])
+        T = np.eye(4)
+        T[:3,:3] = Rot
+        T[:3,3] = t
+        return T
 
     def read_file(self):
         # Read ground truth origin data
