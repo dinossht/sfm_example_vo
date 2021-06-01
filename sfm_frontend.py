@@ -6,12 +6,12 @@ from sfm_frontend_utils import *
 from parameters import param
 
 
-MAX_DEPTH = 10000 * param.VO_SCALE
-MIN_DEPTH = 0 * param.VO_SCALE
-MIN_NUM_OBS = 3
-MAX_PIXEL_ERR = 5
+MAX_DEPTH = 1e4 # in meter
+MIN_DEPTH = 0.5
+MIN_NUM_OBS = 2
+MAX_PIXEL_ERR = 12
 FILT_DEPTH = True
-cos_max_parallax = 0.999999
+cos_max_parallax = 0.99999
 
 class UniquePoint3D:
     global_point_id = 0
@@ -69,13 +69,13 @@ class SFM_frontend:
         self.K = K
         # Move camera to IMU origo
         self.T_imu_c = np.array([
-            [1, 0, 0, 1000],
-            [0, 1, 0, -50],
-            [0, 0, 1, 100],
+            [1, 0, 0, 0],
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
             [0, 0, 0, 1]
         ])
 
-    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None):
+    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pos0=None, rtk_pos1=None):
         print("Initializing")
         print("#" * 20)
         # Init match frames
@@ -197,12 +197,10 @@ class SFM_frontend:
 
         sfm_map = SfmMap()
         # Add first keyframe as reference frame.
-        #kf_0 = Keyframe(matched_frames[0], SE3())
-        kf_0 = Keyframe(matched_frames[0], pose0)
+        kf_0 = Keyframe(matched_frames[0], pose0, rtk_pos0)
         sfm_map.add_keyframe(kf_0)
         # Add second keyframe from relative pose.
-        #kf_1 = Keyframe(matched_frames[1], pose_0_1)
-        kf_1 = Keyframe(matched_frames[1], pose1)
+        kf_1 = Keyframe(matched_frames[1], pose1, rtk_pos1)
         sfm_map.add_keyframe(kf_1)
 
         # Calculate initial yaw angle offset
@@ -242,7 +240,7 @@ class SFM_frontend:
         sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
 
-    def track_map(self, sfm_map, img_path=None, img=None):
+    def track_map(self, sfm_map, img_path=None, img=None, rtk_pos=None):
         print("Tracking")
         print("#" * 20)
         frame_idx = sfm_map._cur_keyframe_id + 1
@@ -290,7 +288,7 @@ class SFM_frontend:
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
 
         # Add keyframe to map
-        kf = Keyframe(matched_frame, pose_0_2)
+        kf = Keyframe(matched_frame, pose_0_2, rtk_pos)
         sfm_map.add_keyframe(kf)
 
         color_img = matched_frame.load_image()

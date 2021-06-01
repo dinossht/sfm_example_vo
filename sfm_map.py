@@ -206,12 +206,14 @@ class MatchedFrame:
 
 
 class Keyframe:
-    def __init__(self, frame: MatchedFrame, pose_w_c: SE3):
+    def __init__(self, frame: MatchedFrame, pose_w_c: SE3, rtk_pos):
         self._id = frame.id()
         self._frame = frame
         self._pose_w_c = pose_w_c
         self._map_points = {}
         self._has_been_optimized = False
+        
+        self.rtk_pos = rtk_pos
 
     def id(self):
         return self._id

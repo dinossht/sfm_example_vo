@@ -54,9 +54,18 @@ class BatchBundleAdjustment:
         
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
-        prior_distance = param.VO_SCALE
+        prior_distance = np.linalg.norm(kf_0.rtk_pos-kf_1.rtk_pos)
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
+
+        # Add position prior (RTK or GPS)
+        for keyframe in sfm_map.get_keyframes():
+            inv_sigma = 10
+            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
+            prior_pos = keyframe.rtk_pos
+            prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
+            factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
+            graph.push_back(factor)
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()

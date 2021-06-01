@@ -25,22 +25,23 @@ N = 10
 
 dat = camRtkData()
 def next_frame():
+    img_out, T_out = dat.get_img_rtk_pos_in_IMU()
     for _ in range(N):
         img, T = dat.get_img_rtk_pos_in_IMU()
-    return img, T
+    return img_out, T_out
 
 def main():
     optimizer = BatchBundleAdjustment()
 
     sfm_frontend = SFM_frontend(10000, 0.7)
 
-    img0, T = next_frame()
-    img1, T = next_frame()
-    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1)
+    img0, T0 = next_frame()
+    img1, T1 = next_frame()
+    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pos0=T0[:3,3], rtk_pos1=T1[:3,3])
 
     # Track a new frame
     img, T = next_frame()
-    sfm_frontend.track_map(sfm_map, img=img)
+    sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
 
     def get_geometry():
         poses = sfm_map.get_keyframe_poses()
@@ -66,7 +67,7 @@ def main():
 
     def track_new_frame(vis):
         img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img)
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
 
         vis.clear_geometries()
         for geom in get_geometry():
@@ -94,9 +95,9 @@ def main():
 
         #Track Track 
         img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img)
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
         img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img)
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
 
         # Optimize
         for j in range(5):
