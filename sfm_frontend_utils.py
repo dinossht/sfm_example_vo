@@ -13,7 +13,7 @@ def triangulate_points_from_two_views(P_0, kp_0: np.ndarray,
 
 def estimate_pose_from_map_correspondences(K, kp: np.ndarray, points_w: np.ndarray):
     # Estimate initial pose with a (new) PnP-method.
-    _, theta_vec, t = cv2.solvePnP(points_w.T, kp.T, K, None, flags=cv2.SOLVEPNP_SQPNP)
+    _, theta_vec, t = cv2.solvePnP(points_w.T, kp.T, K, None)#, flags=cv2.SOLVEPNP_SQPNP)
     pose_c_w = SE3((SO3.Exp(theta_vec), t.reshape(3, 1)))
 
     return pose_c_w.inverse()
