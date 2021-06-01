@@ -6,10 +6,10 @@ from sfm_frontend_utils import *
 from parameters import param
 
 
-MAX_DEPTH = 1e4 # in meter
+MAX_DEPTH = 1e10 # in meter
 MIN_DEPTH = 0.5
-MIN_NUM_OBS = 2
-MAX_PIXEL_ERR = 12
+MIN_NUM_OBS = 3
+MAX_PIXEL_ERR = 5
 FILT_DEPTH = True
 cos_max_parallax = 0.99999
 

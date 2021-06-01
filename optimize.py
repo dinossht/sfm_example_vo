@@ -45,7 +45,6 @@ class BatchBundleAdjustment:
 
         # Set prior on the first camera (which we will assume defines the reference frame).
         no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
-        #factor = gtsam.PriorFactorPose3(X(kf_0.id()), gtsam.Pose3(), no_uncertainty_in_pose)
         kf0_R = kf_0.pose_w_c()._rotation._matrix
         kf0_t = kf_0.pose_w_c()._translation
         kf0_pose = gtsam.Pose3(gtsam.Rot3(kf0_R), np.reshape(kf0_t,(3,1)))
@@ -60,7 +59,7 @@ class BatchBundleAdjustment:
 
         # Add position prior (RTK or GPS)
         for keyframe in sfm_map.get_keyframes():
-            inv_sigma = 10
+            inv_sigma = 100
             uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
             prior_pos = keyframe.rtk_pos
             prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)

@@ -89,11 +89,11 @@ def set_axes_equal(fignum):
 
 
 class camRtkData:
-    def __init__(self):
+    def __init__(self, t_start):
         self.init = False
 
         trip_nr = 3
-        self.dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", 650, -1)
+        self.dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", t_start, -1)
         self.gt = ROSGroundTruth(f"dataset/groundtruths/obsv_estimates ({trip_nr}).mat", "dataset/groundtruths/ned_origin.mat", trip_nr)
 
 

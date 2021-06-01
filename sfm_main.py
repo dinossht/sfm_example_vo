@@ -23,7 +23,7 @@ from load_ros_camera_rtk import camRtkData
 
 N = 10
 
-dat = camRtkData()
+dat = camRtkData(640)
 def next_frame():
     img_out, T_out = dat.get_img_rtk_pos_in_IMU()
     for _ in range(N):
