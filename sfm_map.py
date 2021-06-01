@@ -109,24 +109,28 @@ class KeyPoint:
 
 
 class MatchedFrame:
-    def __init__(self, id, camera_model, img_path):
+    def __init__(self, id, camera_model, img_path, img=None):
         self._id = id
         self._camera_model = camera_model
         self._img_path = img_path
+        self.img = img
         self._keypoints = {}
         self._frame_matches = {}
-
-        self.graph = None
-        self.result = None
 
     def id(self):
         return self._id
 
     def load_image(self):
-        return cv2.cvtColor(cv2.imread(self._img_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
+        if self._img_path is not None:
+            return cv2.cvtColor(cv2.imread(self._img_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB)
+        else:
+            return self.img
 
     def load_image_grayscale(self):
-        return cv2.imread(self._img_path, cv2.IMREAD_GRAYSCALE)
+        if self._img_path is not None:
+            return cv2.imread(self._img_path, cv2.IMREAD_GRAYSCALE)
+        else:
+            return cv2.cvtColor(self.img, cv2.COLOR_BGR2GRAY)
 
     def add_keypoint(self, keypoint_id, keypoint):
         self._keypoints[keypoint_id] = keypoint
@@ -323,6 +327,11 @@ class SfmMap:
         self._cur_keyframe = None
         self._latest_map_points = []
 
+        self.graph = None
+        self.result = None
+
+        self._cur_keyframe_id = -1
+
 
     def set_latest_map_points(self, latest_map_points):
         self._latest_map_points = latest_map_points
@@ -341,6 +350,7 @@ class SfmMap:
         return self._cur_keyframe
     
     def add_keyframe(self, keyframe):
+        self._cur_keyframe_id += 1
         self._keyframes[keyframe.id()] = keyframe
         self._newly_added_keyframes.append(keyframe)
 

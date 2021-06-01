@@ -7,6 +7,7 @@ from gtsam.utils import plot
 import matplotlib.pyplot as plt
 import numpy as np
 import cv2
+from load_ros_camera_rtk import camRtkData
 
 
 # TODO: add prior factor for pose based on constant vel motion model
@@ -20,31 +21,26 @@ import cv2
 # TODO: plott feature matching
 
 
-i = 0
-N = 10#20
-off = 0
-def next_frame_path():
-    global i, N, off
-    path = f"kaia_data/frame_id_{off + i * N}.png"
-    frame_id = i
-    i += 1
-    return path, frame_id
+N = 10
+
+dat = camRtkData()
+def next_frame():
+    for _ in range(N):
+        img, T = dat.get_img_rtk_pos_in_IMU()
+    return img, T
 
 def main():
     optimizer = BatchBundleAdjustment()
 
     sfm_frontend = SFM_frontend(10000, 0.7)
 
-    # Add frame 0 and 1 to init
-    path0, _ = next_frame_path()
-    path1, _ = next_frame_path()
-    #path0 = "car_data/img0.png"
-    #path1 = "car_data/img1.png"
-    sfm_map = sfm_frontend.initialize(path0, path1)
+    img0, T = next_frame()
+    img1, T = next_frame()
+    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1)
 
     # Track a new frame
-    path, frame_id = next_frame_path()
-    sfm_frontend.track_map(sfm_map, frame_id, path)
+    img, T = next_frame()
+    sfm_frontend.track_map(sfm_map, img=img)
 
     def get_geometry():
         poses = sfm_map.get_keyframe_poses()
@@ -69,15 +65,15 @@ def main():
             vis.add_geometry(geom, reset_bounding_box=False)
 
     def track_new_frame(vis):
-        path, frame_id = next_frame_path()
-        sfm_frontend.track_map(sfm_map, frame_id, path)
+        img, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img)
 
         vis.clear_geometries()
         for geom in get_geometry():
             vis.add_geometry(geom, reset_bounding_box=False)
 
     def create_new_points(vis):
-        sfm_frontend.create_new_map_points(sfm_map, i-3, i-1) # last two frames, Not last two!!!
+        sfm_frontend.create_new_map_points(sfm_map) # last two frames, Not last two!!!
 
         vis.clear_geometries()
         for geom in get_geometry():
@@ -94,14 +90,13 @@ def main():
         # Create->track->track->optimize->cull
 
         # Create
-        sfm_frontend.create_new_map_points(sfm_map, i-3, i-1) 
+        sfm_frontend.create_new_map_points(sfm_map) 
 
         #Track Track 
-        path, frame_id = next_frame_path()
-        sfm_frontend.track_map(sfm_map, frame_id, path)
-
-        path, frame_id = next_frame_path()
-        sfm_frontend.track_map(sfm_map, frame_id, path)
+        img, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img)
+        img, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img)
 
         # Optimize
         for j in range(5):
@@ -122,13 +117,13 @@ def main():
         """
         if sfm_map.graph is not None:
             # Plot trajectory and marginals
-            marginals = Marginals(sfm_map.graph, sfm_map.result)
+            #marginals = Marginals(sfm_map.graph, sfm_map.result)
             #plot.plot_3d_points(1, result, marginals=marginals)
             plot.plot_trajectory(1, sfm_map.result)#, marginals=marginals, scale=8)
             plot.set_axes_equal(1)        
             plt.figure()
-            last_path = sfm_map.get_keyframe(1)._frame._img_path
-            plt.imshow(cv2.cvtColor(cv2.imread(last_path, cv2.IMREAD_UNCHANGED), cv2.COLOR_BGR2RGB))
+            img = sfm_map.get_keyframe(sfm_map._cur_keyframe_id)._frame.load_image()
+            plt.imshow(img)
             plt.show()
 
     # Create visualizer.

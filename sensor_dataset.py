@@ -107,7 +107,7 @@ class ROSDataset:
         """Get camera frame and timestamp"""
         topic, msg, t = next(self.cam_msgs)
         image = self._img_from_CompressedImage(msg)
-        image = image[:, :, ::-1]  # Convert RGB to BGR
+        #image = image[:, :, ::-1]  # Convert RGB to BGR
 
         timestamp = t.to_sec()
         frame_id = None

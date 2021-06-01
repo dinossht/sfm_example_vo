@@ -75,13 +75,13 @@ class SFM_frontend:
             [0, 0, 0, 1]
         ])
 
-    def initialize(self, img0_path, img1_path):
+    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None):
         print("Initializing")
         print("#" * 20)
         # Init match frames
         matched_frames = [
-            MatchedFrame(0, PerspectiveCamera(self.f, self.principal_point), img0_path),
-            MatchedFrame(1, PerspectiveCamera(self.f, self.principal_point), img1_path)]
+            MatchedFrame(0, PerspectiveCamera(self.f, self.principal_point), img0_path, img0),
+            MatchedFrame(1, PerspectiveCamera(self.f, self.principal_point), img1_path, img1)]
 
         # Load images
         img0 = matched_frames[0].load_image_grayscale()
@@ -242,10 +242,11 @@ class SFM_frontend:
         sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
 
-    def track_map(self, sfm_map, frame_idx, img_path):
+    def track_map(self, sfm_map, img_path=None, img=None):
         print("Tracking")
         print("#" * 20)
-        matched_frame = MatchedFrame(frame_idx, PerspectiveCamera(self.f, self.principal_point), img_path)
+        frame_idx = sfm_map._cur_keyframe_id + 1
+        matched_frame = MatchedFrame(frame_idx, PerspectiveCamera(self.f, self.principal_point), img_path, img)
 
         img = matched_frame.load_image_grayscale()
         kp, des = self.feature.detectAndCompute(img)
@@ -310,12 +311,12 @@ class SFM_frontend:
 
         return sfm_map
 
-    def create_new_map_points(self, sfm_map, frame_id_0, frame_id_1):
+    def create_new_map_points(self, sfm_map):
         print("New map points")
         print("#" * 20)
 
-        kf_0 = sfm_map.get_keyframe(frame_id_0)
-        kf_1 = sfm_map.get_keyframe(frame_id_1)
+        kf_0 = sfm_map.get_keyframe(sfm_map._cur_keyframe_id - 2)
+        kf_1 = sfm_map.get_keyframe(sfm_map._cur_keyframe_id)
         kfs = [kf_0, kf_1]
         matched_frames = [kf_0._frame, kf_1._frame]
 
