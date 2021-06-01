@@ -1,6 +1,7 @@
 from sensor_dataset import ROSDataset
 from ground_truth import ROSGroundTruth
 import matplotlib.pyplot as plt
+from coordinate_transformations import R_cam_imu_matrix
 import numpy as np
 
 
@@ -23,7 +24,7 @@ def plot_trajectory(fignum, poses, scale=1, title="Plot Trajectory", axis_labels
     axes.set_xlabel(axis_labels[0])
     axes.set_ylabel(axis_labels[1])
     axes.set_zlabel(axis_labels[2])
-    axes.view_init(elev=-90, azim=0)
+    axes.view_init(elev=0, azim=-90)
 
     # Then 3D poses, if any
     for pose in poses:
@@ -87,24 +88,52 @@ def set_axes_equal(fignum):
     ax.set_zlim3d([origin[2] - radius, origin[2] + radius])
 
 
-trip_nr = 3
-dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", 650, -1)
-gt = ROSGroundTruth(f"dataset/groundtruths/obsv_estimates ({trip_nr}).mat", "dataset/groundtruths/ned_origin.mat", trip_nr)
+class camRtkData:
+    def __init__(self):
+        self.init = False
+
+        trip_nr = 3
+        self.dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", 650, -1)
+        self.gt = ROSGroundTruth(f"dataset/groundtruths/obsv_estimates ({trip_nr}).mat", "dataset/groundtruths/ned_origin.mat", trip_nr)
 
 
-_, _, timestamp_off = dat.get_image()
+    def get_rtk_pos_in_IMU(self, timestamp):
+        if not self.init:
+            self.init = True
+
+            T0 = self.gt.get_T(timestamp)
+            # NED to body
+            T0_body_ned = np.linalg.inv(T0)
+            R_cam_imu, rtkOrigo_imu, R_zxy_xyz = R_cam_imu_matrix()
+
+            Trans = np.eye(4)
+            # Convert to imu frame
+            Trans[:3,:3] = R_cam_imu
+            Trans = Trans @ T0_body_ned
+            # Move to IMU origo
+            #Trans[:3,3] += rtkOrigo_imu
+            self.T_matrix = Trans
+
+        T = self.T_matrix @ self.gt.get_T(timestamp)
+        return T
+
+    def get_img_rtk_pos_in_IMU(self):
+        img, _, timestamp = self.dat.get_image()
+        T = self.get_rtk_pos_in_IMU(timestamp)
+        return img, T
+
+"""
+dat = camRtkData()
 
 poses = []
-for i in range(100):
-    if i == 0:
-        T0 = gt.get_T(timestamp_off + i)
-
-    T = np.linalg.inv(T0) @ gt.get_T(timestamp_off + i)
+for _ in range(20):#510
+    img, T = dat.get_img_rtk_pos_in_IMU()
     poses.append(T)
     
-
 plot_trajectory(1, poses)
 set_axes_equal(1)        
 plt.show()
+"""
+
 
 
