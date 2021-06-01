@@ -9,7 +9,7 @@ from parameters import param
 MAX_DEPTH = 1e10 # in meter
 MIN_DEPTH = 0.5
 MIN_NUM_OBS = 3
-MAX_PIXEL_ERR = 5
+MAX_PIXEL_ERR = 50#5
 FILT_DEPTH = True
 cos_max_parallax = 0.99999
 

@@ -21,7 +21,7 @@ from load_ros_camera_rtk import camRtkData
 # TODO: plott feature matching
 
 
-N = 10
+N = 20
 
 dat = camRtkData(640)
 def next_frame():
@@ -42,6 +42,7 @@ def main():
     # Track a new frame
     img, T = next_frame()
     sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+    optimizer.full_bundle_adjustment_update(sfm_map)
 
     def get_geometry():
         poses = sfm_map.get_keyframe_poses()
@@ -96,11 +97,11 @@ def main():
         #Track Track 
         img, T = next_frame()
         sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
-        img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+        #img, T = next_frame()
+        #sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
 
         # Optimize
-        for j in range(5):
+        for j in range(1):
             optimizer.full_bundle_adjustment_update(sfm_map)
 
         # Cull
