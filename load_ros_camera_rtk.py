@@ -101,7 +101,7 @@ class camRtkData:
         if not self.init:
             self.init = True
 
-            T0 = self.gt.get_T(timestamp)
+            T0 = self.gt.get_T_body(timestamp)
             # NED to body
             T0_body_ned = np.linalg.inv(T0)
             R_cam_imu, rtkOrigo_imu, R_zxy_xyz = R_cam_imu_matrix()
@@ -114,7 +114,7 @@ class camRtkData:
             #Trans[:3,3] += rtkOrigo_imu
             self.T_matrix = Trans
 
-        T = self.T_matrix @ self.gt.get_T(timestamp)
+        T = self.T_matrix @ self.gt.get_T_body(timestamp)
         return T
 
     def get_img_rtk_pos_in_IMU(self):

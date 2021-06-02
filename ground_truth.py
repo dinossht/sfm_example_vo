@@ -1,6 +1,7 @@
 import os
 import scipy.io
 import numpy as np
+from utils import R_z, R_y
 from scipy.spatial.transform import Rotation as R
 
 
@@ -31,7 +32,7 @@ class ROSGroundTruth:
         roll, pitch, yaw = self.eulers[i]
         return GroundTruth(x, y, z, roll, pitch, yaw)
 
-    def get_T(self, timestamp):
+    def get_T_body(self, timestamp):
         g = self.get_xyz(timestamp)
         Rot = R.from_euler("zyx", [g.yaw, g.pitch, g.roll], degrees=False).as_matrix()
         t = np.array([g.x, g.y, g.z])
@@ -39,6 +40,34 @@ class ROSGroundTruth:
         T[:3,:3] = Rot
         T[:3,3] = t
         return T
+
+    def get_T_cam(self, timestamp):
+        T_body = self.get_T_body(timestamp)
+        T_cam = T_body.copy()
+        R_body = T_body[:3,:3]
+        # Cam offset w.r.t. body frame origo,
+        # This is the ground truth pose of the camera
+        T_cam[:3,3] += R_body @ np.array([3.28, 0, -1.4])
+
+        # z, y, x
+        [yaw_body, pitch_body, roll_body] = R.from_matrix(T_body[:3,:3]).as_euler("zyx", degrees=True)
+
+        # z, y, x
+        yaw_cam, pitch_cam, roll_cam = roll_body, yaw_body, pitch_body
+        R_cam = R.from_euler("zyx", [yaw_cam, pitch_cam, roll_cam], degrees=True).as_matrix()
+        R_cam = R_y(13) @ R_cam
+
+        """
+        # Rotate to camera frame
+        R_zxy_xyz = np.array([
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 0, 0]])
+        R_cam_body = R_zxy_xyz @ R_z(-13)
+        T_cam[:3,:3] = R_cam_body @ R_body
+        """
+        T_cam[:3,:3] = R_cam
+        return T_cam
 
     def read_file(self):
         # Read ground truth origin data

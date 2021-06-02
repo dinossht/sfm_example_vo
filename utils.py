@@ -1,5 +1,6 @@
 import numpy as np
 import cv2 as cv
+from scipy.spatial.transform import Rotation as R
 
 
 K = np.array([
@@ -67,3 +68,25 @@ def camera_projection_X_to_uv(K, pose_c_w, X):
 def uv_to_X_error(uv, K, pose_c_w, X_w):
     uv_hat = camera_projection_X_to_uv(K, pose_c_w, X_w)
     return np.linalg.norm(uv-uv_hat)
+
+def R_z(yaw_deg):
+    y = yaw_deg * np.pi / 180
+    return np.array([
+    [np.cos(y),     -np.sin(y), 0],
+    [np.sin(y),     np.cos(y),  0],
+    [0,             0,          1]])
+
+def R_y(pitch):
+    p = pitch * np.pi / 180
+    return np.array([
+    [np.cos(p),     0, np.sin(p)],
+    [0,             1, 0],
+    [-np.sin(p),    0, np.cos(p)]])
+
+def eulers_from_pose_in_deg(T_arr):
+    eulers = []
+    for T in T_arr:
+        [yaw, pitch, roll] = R.from_matrix(T[:3,:3]).as_euler("zyx", degrees=True)
+        eulers.append([roll, pitch, yaw])
+    return np.array(eulers)
+
