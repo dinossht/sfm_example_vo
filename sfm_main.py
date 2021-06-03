@@ -18,9 +18,9 @@ from load_ros_camera_rtk import camRtkData
 # TODO: plott feature matching
 
 
-N = 20
+N = 10
 
-dat = camRtkData(650)
+dat = camRtkData(630)
 def next_frame():
     img_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
     for _ in range(N):
@@ -30,7 +30,7 @@ def next_frame():
 def main():
     optimizer = BatchBundleAdjustment()
 
-    sfm_frontend = SFM_frontend(10000, 0.7)
+    sfm_frontend = SFM_frontend(2000, 0.7)
 
     img0, T0 = next_frame()
     img1, T1 = next_frame()
