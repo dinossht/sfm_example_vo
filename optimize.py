@@ -84,7 +84,6 @@ class BatchBundleAdjustment:
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
 
-        """
         # Add position prior (RTK or GPS)
         for keyframe in sfm_map.get_keyframes():
             inv_sigma = 100
@@ -93,7 +92,6 @@ class BatchBundleAdjustment:
             prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
             factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
             graph.push_back(factor)
-        """
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
