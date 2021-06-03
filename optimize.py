@@ -29,19 +29,21 @@ class BatchBundleAdjustment:
 
         # Unfortunately, the dataset does not contain any information on uncertainty in the observations,
         # so we will assume a common observation uncertainty of 3 pixels in u and v directions.
-        obs_uncertainty = gtsam.noiseModel.Isotropic.Sigma(2, 3.0) #(2, 3.0)
+        obs_uncertainty = gtsam.noiseModel.Isotropic.Sigma(2, 3.0)
 
+        # The pose of the sensor in the body frame
         # body_P_sensor is the transform from body to sensor frame (default identity)
-        R_c_b = R_y(-13) @ np.array([[0, 1, 0],
-                                     [0, 0, 1],
-                                     [1, 0, 0]])
-        t_b = np.array([-3.28, 0, 1.4])  # camera origo given in body frame|
-        t_c = R_c_b @ t_b  # camera origo given in camera frame
-        T_c_b = np.eye(4)
-        T_c_b[:3,:3] = R_c_b
-        T_c_b[:3,3] = t_c
-        T_b_c = np.linalg.inv(T_c_b)
-        body_P_sensor_cam = gtsam.Pose3(gtsam.Rot3(R_c_b), t_c)
+        # body_P_sensor here T_b_c, see epipolar geometry lecture TTK21 Lecture 2 
+        tB_b_c = np.array([3.285, 0, -1.4])  # camera origo given in body frame
+        R_xyz_zxy = np.array([[0, 0, 1],
+                              [1, 0, 0],
+                              [0, 1, 0]])
+        R_b_c = R_z(13) @ R_xyz_zxy
+        T_b_c = np.eye(4)
+        T_b_c[:3,:3] = R_b_c
+        T_b_c[:3,3] = tB_b_c
+        body_P_sensor_cam = gtsam.Pose3(gtsam.Rot3(R_b_c), tB_b_c)
+        T_c_b = np.linalg.inv(T_b_c)
 
         # Add measurements.
         for keyframe in sfm_map.get_keyframes():
@@ -62,21 +64,23 @@ class BatchBundleAdjustment:
 
         # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
         kf0_R_w_c = kf_0.pose_w_c()._rotation._matrix
-        kf0_t_w = kf_0.pose_w_c()._translation.squeeze()
+        kf0_tW_w_c = kf_0.pose_w_c()._translation.squeeze()
+
         kf0_T_w_c = np.eye(4)
         kf0_T_w_c[:3,:3] = kf0_R_w_c
-        kf0_T_w_c[:3,3] = kf0_t_w
+        kf0_T_w_c[:3,3] = kf0_tW_w_c
+
         kf0_T_w_b = kf0_T_w_c @ T_c_b
         kf0_R_w_b = kf0_T_w_b[:3,:3]
-        kf0_t_w = kf0_T_w_b[:3,3]
-        kf0_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf0_R_w_b), kf0_t_w)
+        kf0_tW_w_b = kf0_T_w_b[:3,3]
 
+        kf0_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf0_R_w_b), kf0_tW_w_b)
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose_w_b, no_uncertainty_in_pose)
         graph.push_back(factor)
         
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
-        prior_distance = np.linalg.norm(kf_0.rtk_pos - kf_1.rtk_pos)
+        prior_distance = np.linalg.norm(kf_0.rtk_pose[:3,3] - kf_1.rtk_pose[:3,3])
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
 
@@ -84,8 +88,8 @@ class BatchBundleAdjustment:
         # Add position prior (RTK or GPS)
         for keyframe in sfm_map.get_keyframes():
             inv_sigma = 100
-            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
-            prior_pos = keyframe.rtk_pos
+            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.ar:ray([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
+            prior_pos = keyframe.rtk_pose[:3,3]
             prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
             factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
             graph.push_back(factor)
@@ -98,14 +102,17 @@ class BatchBundleAdjustment:
             # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
             # NOTE: prior is for the pose in body frame
             kf_R_w_c = keyframe.pose_w_c()._rotation._matrix
-            kf_t_w = keyframe.pose_w_c()._translation.squeeze()
+            kf_tW_w_c = keyframe.pose_w_c()._translation.squeeze()
+
             kf_T_w_c = np.eye(4)
             kf_T_w_c[:3,:3] = kf_R_w_c
-            kf_T_w_c[:3,3] = kf_t_w
+            kf_T_w_c[:3,3] = kf_tW_w_c
+
             kf_T_w_b = kf_T_w_c @ T_c_b
             kf_R_w_b = kf_T_w_b[:3,:3]
-            kf_t_w = kf_T_w_b[:3,3]
-            kf_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf_R_w_b), kf_t_w)
+            kf_tW_w_b = kf_T_w_b[:3,3]
+
+            kf_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf_R_w_b), kf_tW_w_b)
             initial_estimate.insert(X(keyframe.id()), kf_pose_w_b)
 
         for map_point in sfm_map.get_map_points():
@@ -135,21 +142,4 @@ class BatchBundleAdjustment:
             updated_point_w = result.atPoint3(L(map_point.id())).reshape(3, 1)
             map_point.update_point_w(updated_point_w)
 
-        sfm_map.has_been_updated()
-
-
-class IncrementalBundleAdjustment:
-    def __init__(self):
-        self._isam = gtsam.ISAM2
-
-    def full_bundle_adjustment_update(sfm_map: SfmMap):
-        # You can get the new updates with.
-        new_kfs = sfm_map.get_new_keyframes_not_optimized()
-        new_mps = sfm_map.get_new_map_points_not_optimized()
-
-        # Create factor graph from updates.
-
-        # Update isam2.
-
-        # Remember to update the results!
         sfm_map.has_been_updated()

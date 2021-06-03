@@ -67,15 +67,8 @@ class SFM_frontend:
         self.f = np.array([[1.9954e+03, 1.9952e+03]]).T
         self.principal_point = np.array([[9.6550e+02, 6.0560e+02]]).T
         self.K = K
-        # Move camera to IMU origo
-        self.T_imu_c = np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1]
-        ])
 
-    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pos0=None, rtk_pos1=None):
+    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pose0=None, rtk_pose1=None):
         print("Initializing")
         print("#" * 20)
         # Init match frames
@@ -105,9 +98,21 @@ class SFM_frontend:
         T_0_1, inliers_mask = recoverPose(feat_track[1].good_kps_n(), feat_track[0].good_kps_n())  
         pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
 
-        # Convert to IMU origo
-        T0 = self.T_imu_c @ SE3().to_matrix()
-        T1 = self.T_imu_c @ pose_0_1.to_matrix()
+        # Provide camera pose in ned frame
+        tB_b_c = np.array([3.285, 0, -1.4])  # camera origo given in body frame
+        R_xyz_zxy = np.array([[0, 0, 1],
+                              [1, 0, 0],
+                              [0, 1, 0]])
+        R_b_c = R_z(13) @ R_xyz_zxy
+        T_b_c = np.eye(4)
+        T_b_c[:3,:3] = R_b_c
+        T_b_c[:3,3] = tB_b_c  # pose of camera in body frame
+
+        T_n_b = rtk_pose0     # pose of body in ned frame
+        T_n_c = T_n_b @ T_b_c
+
+        T0 = T_n_c @ SE3().to_matrix()
+        T1 = T_n_c @ T_0_1
         pose0 = SE3((SO3(T0[:3,:3]), T0[:3,3]))
         pose1 = SE3((SO3(T1[:3,:3]), T1[:3,3]))
 
@@ -197,14 +202,15 @@ class SFM_frontend:
 
         sfm_map = SfmMap()
         # Add first keyframe as reference frame.
-        kf_0 = Keyframe(matched_frames[0], pose0, rtk_pos0)
+        kf_0 = Keyframe(matched_frames[0], pose0, rtk_pose0)
         sfm_map.add_keyframe(kf_0)
         # Add second keyframe from relative pose.
-        kf_1 = Keyframe(matched_frames[1], pose1, rtk_pos1)
+        kf_1 = Keyframe(matched_frames[1], pose1, rtk_pose1)
         sfm_map.add_keyframe(kf_1)
 
         # Calculate initial yaw angle offset
         heading_vector = kf_1.pose_w_c().translation - kf_0.pose_w_c().translation
+        heading_vector /= np.linalg.norm(heading_vector)
         heading_vector[:2] = 0
         reference_vector = np.array([[0], [0], [1]])  # initially pointing forward with z
         print(f"Init camera yaw mount offset: {180 * np.arccos(np.dot(heading_vector, reference_vector[:, 0])) / np.pi}")
@@ -240,7 +246,7 @@ class SFM_frontend:
         sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
 
-    def track_map(self, sfm_map, img_path=None, img=None, rtk_pos=None):
+    def track_map(self, sfm_map, img_path=None, img=None, rtk_pose=None):
         print("Tracking")
         print("#" * 20)
         frame_idx = sfm_map._cur_keyframe_id + 1
@@ -288,7 +294,7 @@ class SFM_frontend:
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
 
         # Add keyframe to map
-        kf = Keyframe(matched_frame, pose_0_2, rtk_pos)
+        kf = Keyframe(matched_frame, pose_0_2, rtk_pose)
         sfm_map.add_keyframe(kf)
 
         color_img = matched_frame.load_image()

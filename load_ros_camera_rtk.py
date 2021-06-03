@@ -122,6 +122,11 @@ class camRtkData:
         T = self.get_rtk_pos_in_IMU(timestamp)
         return img, T
 
+    def get_img_and_rtk_pose_of_body_in_ned(self):
+        img, _, timestamp = self.dat.get_image()
+        T = self.gt.get_T_body(timestamp)
+        return img, T
+
 """
 dat = camRtkData()
 

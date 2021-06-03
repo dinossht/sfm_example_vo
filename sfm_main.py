@@ -6,6 +6,7 @@ import open3d as o3d
 from gtsam.utils import plot
 import matplotlib.pyplot as plt
 import numpy as np
+import gtsam
 import cv2
 from load_ros_camera_rtk import camRtkData
 
@@ -25,9 +26,9 @@ N = 20
 
 dat = camRtkData(640)
 def next_frame():
-    img_out, T_out = dat.get_img_rtk_pos_in_IMU()
+    img_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
     for _ in range(N):
-        img, T = dat.get_img_rtk_pos_in_IMU()
+        img, T = dat.get_img_and_rtk_pose_of_body_in_ned()
     return img_out, T_out
 
 def main():
@@ -37,11 +38,11 @@ def main():
 
     img0, T0 = next_frame()
     img1, T1 = next_frame()
-    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pos0=T0[:3,3], rtk_pos1=T1[:3,3])
+    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1)
 
     # Track a new frame
     img, T = next_frame()
-    sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+    sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
     optimizer.full_bundle_adjustment_update(sfm_map)
 
     def get_geometry():
@@ -50,7 +51,7 @@ def main():
 
         axes = []
         for pose in poses:
-            axes.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=1.0).transform(pose.to_matrix()))
+            axes.append(o3d.geometry.TriangleMesh.create_coordinate_frame(size=10.0).transform(pose.to_matrix()))
 
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(p.T)
@@ -59,7 +60,7 @@ def main():
         return [pcd] + axes
 
     def optimize(vis):
-        for _ in range(3):
+        for _ in range(1):
             optimizer.full_bundle_adjustment_update(sfm_map)
 
         vis.clear_geometries()
@@ -68,7 +69,7 @@ def main():
 
     def track_new_frame(vis):
         img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
 
         vis.clear_geometries()
         for geom in get_geometry():
@@ -96,9 +97,9 @@ def main():
 
         #Track Track 
         img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
         #img, T = next_frame()
-        #sfm_frontend.track_map(sfm_map, img=img, rtk_pos=T[:3,3])
+        #sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
 
         # Optimize
         for j in range(1):
@@ -128,6 +129,26 @@ def main():
             plt.imshow(img)
             plt.show()
 
+    def plot_2d_trajectory(vis):
+        poses = gtsam.utilities.allPose3s(sfm_map.result)
+        pos_est_ned_arr, pos_gt_ned_arr = [], []
+        for key, keyframe in zip(poses.keys(), sfm_map.get_keyframes()):
+            pose = poses.atPose3(key)
+            pos_est_ned = pose.translation()
+            pos_gt_ned = keyframe.rtk_pose[:3,3]
+            pos_est_ned_arr.append(pos_est_ned)
+            pos_gt_ned_arr.append(pos_gt_ned)
+        pos_est_ned_arr, pos_gt_ned_arr = np.array(pos_est_ned_arr), np.array(pos_gt_ned_arr)
+
+        plt.plot(pos_est_ned_arr[:, 1], pos_est_ned_arr[:, 0], color="blue")
+        plt.plot(pos_gt_ned_arr[:, 1], pos_gt_ned_arr[:, 0], color="black", linestyle="dashed")
+        plt.legend(["estimate", "rtk gt"])
+        plt.title("Trajectory in NED")
+        plt.xlabel("y [m]")
+        plt.ylabel("x [m]")
+        plt.show()
+        
+
     # Create visualizer.
     key_to_callback = {}
     key_to_callback[ord("O")] = optimize
@@ -136,6 +157,7 @@ def main():
     key_to_callback[ord("D")] = cull_bad_points
     key_to_callback[ord("I")] = iterate
     key_to_callback[ord("M")] = M_init_cam
+    key_to_callback[ord("P")] = plot_2d_trajectory
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 
 
