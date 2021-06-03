@@ -76,12 +76,19 @@ def R_z(yaw_deg):
     [np.sin(y),     np.cos(y),  0],
     [0,             0,          1]])
 
-def R_y(pitch):
-    p = pitch * np.pi / 180
+def R_y(pitch_deg):
+    p = pitch_deg * np.pi / 180
     return np.array([
     [np.cos(p),     0, np.sin(p)],
     [0,             1, 0],
     [-np.sin(p),    0, np.cos(p)]])
+
+def R_x(roll_deg):
+    r = roll_deg * np.pi / 180
+    return np.array([
+    [1, 0,          0],
+    [0, np.cos(r), -np.sin(r)], 
+    [0, np.sin(r),  np.cos(r)]])
 
 def eulers_from_pose_in_deg(T_arr):
     eulers = []

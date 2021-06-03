@@ -48,8 +48,8 @@ class calibrate:
         img0 = cv2.imread(path0, cv2.IMREAD_GRAYSCALE)
         img1 = cv2.imread(path1, cv2.IMREAD_GRAYSCALE)
 
-        headings = []
         yaws = []
+        pitches = []
         rolls = []
         for it in range(self.NUM_ITER):
             # Detect features
@@ -71,36 +71,45 @@ class calibrate:
             pose_0_1 = SE3((SO3(T_0_1[:3,:3]), T_0_1[:3,3])) # pose_w_c, 0 == world_frame, 1 == cam_frame
 
             # Calculate initial yaw angle offset
-            heading_vector = pose_0_1.translation
-            heading_vector[:2] = 0
+            yaw_vector = pose_0_1.translation.copy()
+            yaw_vector[0] = 0
+            yaw_vector[1] = 0
             reference_vector = np.array([[0], [0], [1]])  # initially pointing forward with z
-            heading = 180 * np.arccos(np.dot(heading_vector, reference_vector[:, 0])) / np.pi
-            headings.append(heading)
-
-            # Calculate initial yaw angle offset
-            yaw_vector = np.zeros((3,))
-            yaw_vector[1] = pose_0_1.translation[1]
-            reference_vector = np.array([[0], [1], [0]])  # initially pointing forward with z
             yaw = 180 * np.arccos(np.dot(yaw_vector, reference_vector[:, 0])) / np.pi
             yaws.append(yaw)
 
+            # Calculate initial yaw angle offset
+            pitch_vector = pose_0_1.translation.copy()
+            pitch_vector[0] = 0
+            pitch_vector[2] = 0
+            reference_vector = np.array([[0], [1], [0]])  # initially pointing forward with z
+            pitch = 180 * np.arccos(np.dot(pitch_vector, reference_vector[:, 0])) / np.pi
+            pitches.append(pitch)
+
             # Calculate initial pitch angle offset
-            roll_vector = np.zeros((3,))
-            roll_vector[1] = pose_0_1.translation[0]
+            roll_vector = pose_0_1.translation.copy()
+            roll_vector[1] = 0
+            roll_vector[2] = 0
             reference_vector = np.array([[1], [0], [0]])  # initially pointing forward with z
             roll = 180 * np.arccos(np.dot(roll_vector, reference_vector[:, 0])) / np.pi
             rolls.append(roll)
             print(it)
 
         plt.subplot(311)
-        plt.hist(headings, bins=100, range=(0, 20))
+        plt.hist(yaws, bins=100, range=(0, 20))
         plt.subplot(312)
-        plt.hist(yaws, bins=100, range=(90-3, 90+3))
+        plt.hist(pitches, bins=100, range=(90-10, 90+10))
         plt.subplot(313)
-        plt.hist(rolls, bins=100, range=(90-3, 90+3))
-        print(np.median(headings))
-        print(np.median(yaws))
-        print(np.median(rolls))
+        plt.hist(rolls, bins=100, range=(90-20, 90+20))
+        print(f"yaw: {np.median(yaws)}")
+        print(f"pitch: {np.median(pitches)}")
+        print(f"roll: {np.median(rolls)}")
+        with open("calibration_data.txt", "w") as f:
+            f.write(f"Median angles after {self.NUM_ITER} iterations:\n")
+            f.write(f"yaw: {np.median(yaws)}\n")
+            f.write(f"pitch: {np.median(pitches)}\n")
+            f.write(f"roll: {np.median(rolls)}\n")
+        
         plt.show()
     
 c = calibrate()

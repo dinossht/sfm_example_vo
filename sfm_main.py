@@ -13,18 +13,14 @@ from load_ros_camera_rtk import camRtkData
 
 # TODO: add prior factor for pose based on constant vel motion model
 # TODO: add smart projection factor/smart factor to solve bad map points
-# TODO: add parallax angle check
 
-# NOTE: To run, click I on keyboard
-
-# TODO: use orbslam to find transformation-camera-body?
 # TODO: remove bad map points, negative depth etc. check pyslam
 # TODO: plott feature matching
 
 
 N = 20
 
-dat = camRtkData(640)
+dat = camRtkData(650)
 def next_frame():
     img_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
     for _ in range(N):

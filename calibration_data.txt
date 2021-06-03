@@ -1,0 +1,4 @@
+Median angles after 50 iterations:
+yaw: 13.64571794055289
+pitch: 92.0982816698134
+roll: 103.52428208469873

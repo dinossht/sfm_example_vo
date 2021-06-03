@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from parameters import param
 
 
+ADD_RTK_PRIOR = True
+
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
         # Variable symbols for camera poses.
@@ -38,7 +40,8 @@ class BatchBundleAdjustment:
         R_xyz_zxy = np.array([[0, 0, 1],
                               [1, 0, 0],
                               [0, 1, 0]])
-        R_b_c = R_z(13) @ R_xyz_zxy
+        R_b_c = R_z(13) @ R_y(-1.5) @ R_xyz_zxy
+        #R_b_c = R_z(13) @ R_xyz_zxy
         T_b_c = np.eye(4)
         T_b_c[:3,:3] = R_b_c
         T_b_c[:3,3] = tB_b_c
@@ -85,13 +88,14 @@ class BatchBundleAdjustment:
         graph.push_back(factor)
 
         # Add position prior (RTK or GPS)
-        for keyframe in sfm_map.get_keyframes():
-            inv_sigma = 100
-            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
-            prior_pos = keyframe.rtk_pose[:3,3]
-            prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
-            factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
-            graph.push_back(factor)
+        if ADD_RTK_PRIOR:
+            for keyframe in sfm_map.get_keyframes():
+                inv_sigma = 100
+                uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
+                prior_pos = keyframe.rtk_pose[:3,3]
+                prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
+                factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
+                graph.push_back(factor)
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
