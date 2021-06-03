@@ -88,7 +88,7 @@ class BatchBundleAdjustment:
         # Add position prior (RTK or GPS)
         for keyframe in sfm_map.get_keyframes():
             inv_sigma = 100
-            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.ar:ray([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
+            uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, inv_sigma]))
             prior_pos = keyframe.rtk_pose[:3,3]
             prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
             factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)

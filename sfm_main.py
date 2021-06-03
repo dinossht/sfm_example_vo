@@ -140,12 +140,25 @@ def main():
             pos_gt_ned_arr.append(pos_gt_ned)
         pos_est_ned_arr, pos_gt_ned_arr = np.array(pos_est_ned_arr), np.array(pos_gt_ned_arr)
 
+        plt.subplot(311)
         plt.plot(pos_est_ned_arr[:, 1], pos_est_ned_arr[:, 0], color="blue")
         plt.plot(pos_gt_ned_arr[:, 1], pos_gt_ned_arr[:, 0], color="black", linestyle="dashed")
         plt.legend(["estimate", "rtk gt"])
-        plt.title("Trajectory in NED")
         plt.xlabel("y [m]")
         plt.ylabel("x [m]")
+
+        plt.subplot(312)
+        norm_xy= np.linalg.norm(pos_est_ned_arr[:, :1] - pos_gt_ned_arr[:, :1], axis=1, ord=1) # L1 norm
+        plt.plot(norm_xy)
+        plt.legend(["L1 norm xy"])
+
+        plt.subplot(313)
+        plt.plot(pos_est_ned_arr[:, 2], color="blue")
+        plt.plot(pos_gt_ned_arr[:, 2], color="black", linestyle="dashed")
+        plt.ylabel("z")
+        plt.xlabel("frame id")
+
+        plt.suptitle("Trajectory in NED")
         plt.show()
         
 
