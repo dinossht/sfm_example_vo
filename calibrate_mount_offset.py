@@ -61,7 +61,7 @@ class calibrate:
             print(f"Num feat: {len(feat_track[0].good_idxs)}")
 
             # Match features
-            good_idx0, good_idx1, _ = self.feature.goodMatches(des0, des1)
+            good_idx0, good_idx1, _ = self.feature.match(des0, des1)
             feat_track[0].good_idxs = feat_track[0].good_idxs[good_idx0]
             feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx1]
             print(f"Num good match: {len(feat_track[0].good_idxs)}")

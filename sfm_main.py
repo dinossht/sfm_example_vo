@@ -146,6 +146,8 @@ def main():
         plt.subplot(312)
         norm_xy= np.linalg.norm(pos_est_ned_arr[:, :1] - pos_gt_ned_arr[:, :1], axis=1, ord=1) # L1 norm
         plt.plot(norm_xy)
+        plt.ylim([-0.1, 1])
+        plt.ylabel("xy L1 norm error [m]")
         plt.legend(["L1 norm xy"])
 
         plt.subplot(313)
@@ -153,6 +155,7 @@ def main():
         plt.plot(pos_gt_ned_arr[:, 2], color="black", linestyle="dashed")
         plt.ylabel("z")
         plt.xlabel("frame id")
+        plt.ylim([0.5, 1.5])
 
         plt.suptitle("Trajectory in NED")
         plt.show()

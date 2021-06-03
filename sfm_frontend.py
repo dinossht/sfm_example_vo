@@ -89,7 +89,7 @@ class SFM_frontend:
         print(f"Num feat: {len(feat_track[0].good_idxs)}")
 
         # Match features
-        good_idx0, good_idx1, _ = self.feature.goodMatches(des0, des1)
+        good_idx0, good_idx1, _ = self.feature.match(des0, des1)
         feat_track[0].good_idxs = feat_track[0].good_idxs[good_idx0]
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx1]
         print(f"Num good match: {len(feat_track[0].good_idxs)}")
@@ -272,7 +272,7 @@ class SFM_frontend:
         feat_track[1] = MyFeatTrack(kp, des)
         print(f"Num feat: {len(feat_track[0].good_idxs)}")
 
-        good_idx_map, good_idx, good = self.feature.goodMatches(des_map, des)
+        good_idx_map, good_idx, good = self.feature.match(des_map, des)
         feat_track[0].good_idxs = feat_track[0].good_idxs[good_idx_map]
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx]
         print(f"Num good match: {len(feat_track[0].good_idxs)}")
@@ -339,7 +339,7 @@ class SFM_frontend:
         print(f"Num feat: {len(feat_track[0].good_idxs)}")
 
         # Match features
-        good_idx0, good_idx1, _ = self.feature.goodMatches(des0, des1)
+        good_idx0, good_idx1, _ = self.feature.match(des0, des1)
         feat_track[0].good_idxs = feat_track[0].good_idxs[good_idx0]
         feat_track[1].good_idxs = feat_track[1].good_idxs[good_idx1]
         print(f"Num good match: {len(feat_track[0].good_idxs)}")
