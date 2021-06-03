@@ -320,7 +320,7 @@ class SFM_frontend:
         print("New map points")
         print("#" * 20)
 
-        kf_0 = sfm_map.get_keyframe(sfm_map._cur_keyframe_id - 2)
+        kf_0 = sfm_map.get_keyframe(sfm_map._cur_keyframe_id - 1)
         kf_1 = sfm_map.get_keyframe(sfm_map._cur_keyframe_id)
         kfs = [kf_0, kf_1]
         matched_frames = [kf_0._frame, kf_1._frame]

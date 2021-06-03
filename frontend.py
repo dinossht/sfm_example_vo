@@ -11,8 +11,9 @@ class Feature:
         self.orb2 = ORBextractor(num_features, 1.2, 16)  #num feat, scale, levels
         self.bf = cv.BFMatcher()
         self.lowes_ratio = lowes_ratio
+        self.sift = cv.SIFT_create(num_features)
 
-    def detectAndCompute(self, img):
+    def detectAndComputeOrb(self, img):
         kps_tuples, des = self.orb2.detectAndCompute(img)
         WIDTH_MASK, HEIGHT_MASK = 590, 850
         kps_tuples_filtered, des_filtered = [], []
@@ -25,6 +26,18 @@ class Feature:
         
         # convert to keypoints 
         kps = [cv.KeyPoint(*kp) for kp in kps_tuples]
+        return np.array(kps), np.array(des)
+
+    def detectAndComputeSift(self, img):
+        mask = np.ones(img.shape) 
+        WIDTH_MASK, HEIGHT_MASK = 590, 850
+        mask[HEIGHT_MASK:, :WIDTH_MASK] = 0
+        kps, des = self.sift.detectAndCompute(img, mask.astype("uint8"))
+        return np.array(kps), np.array(des)
+        
+    def detectAndCompute(self, img):
+        kps, des = self.detectAndComputeSift(img)
+        #kps, des = self.detectAndComputeOrb(img)
         return np.array(kps), np.array(des)
 
     def match(self, des1, des2):
