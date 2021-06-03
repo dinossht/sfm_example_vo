@@ -104,7 +104,7 @@ class SFM_frontend:
                               [1, 0, 0],
                               [0, 1, 0]])
         R_b_c = R_z(13) @ R_y(-1.5) @ R_xyz_zxy
-        R_b_c = R_z(13) @ R_xyz_zxy
+        #R_b_c = R_z(13) @ R_xyz_zxy
         T_b_c = np.eye(4)
         T_b_c[:3,:3] = R_b_c
         T_b_c[:3,3] = tB_b_c  # pose of camera in body frame
