@@ -8,7 +8,7 @@ from collections import defaultdict
 
 class Feature:
     def __init__(self, num_features, lowes_ratio=0.7):
-        self.orb2 = ORBextractor(num_features, 1.1, 12)  #num feat, scale, levels
+        self.orb2 = ORBextractor(num_features, 1.2, 16)  #num feat, scale, levels
         self.bf = cv.BFMatcher()
         self.lowes_ratio = lowes_ratio
 
