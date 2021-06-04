@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from parameters import param
 
 
-ADD_RTK_PRIOR = True
+ADD_RTK_PRIOR = False
 
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
@@ -64,7 +64,7 @@ class BatchBundleAdjustment:
         # Set prior on the first camera (which we will assume defines the reference frame).
         # NOTE: prior is for the pose in body frame
         no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
-
+        """
         # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
         kf0_R_w_c = kf_0.pose_w_c()._rotation._matrix
         kf0_tW_w_c = kf_0.pose_w_c()._translation.squeeze()
@@ -74,6 +74,8 @@ class BatchBundleAdjustment:
         kf0_T_w_c[:3,3] = kf0_tW_w_c
 
         kf0_T_w_b = kf0_T_w_c @ T_c_b
+        """
+        kf0_T_w_b = kf_0.rtk_pose.copy()
         kf0_R_w_b = kf0_T_w_b[:3,:3]
         kf0_tW_w_b = kf0_T_w_b[:3,3]
 
@@ -81,11 +83,25 @@ class BatchBundleAdjustment:
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose_w_b, no_uncertainty_in_pose)
         graph.push_back(factor)
         
+        # Set prior on the second camera
+        # NOTE: prior is for the pose in body frame
+        no_uncertainty_in_pose = gtsam.noiseModel.Constrained.All(6)
+
+        kf1_T_w_b = kf_1.rtk_pose.copy()
+        kf1_R_w_b = kf1_T_w_b[:3,:3]
+        kf1_tW_w_b = kf1_T_w_b[:3,3]
+
+        kf1_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf1_R_w_b), kf1_tW_w_b)
+        factor = gtsam.PriorFactorPose3(X(kf_1.id()), kf1_pose_w_b, no_uncertainty_in_pose)
+        graph.push_back(factor)
+
+        """
         # Set prior on distance to next camera.
         no_uncertainty_in_distance = gtsam.noiseModel.Constrained.All(1)
         prior_distance = np.linalg.norm(kf_0.rtk_pose[:3,3] - kf_1.rtk_pose[:3,3])
         factor = gtsam.RangeFactorPose3(X(kf_0.id()), X(kf_1.id()), prior_distance, no_uncertainty_in_distance)
         graph.push_back(factor)
+        """
 
         # Add position prior (RTK or GPS)
         if ADD_RTK_PRIOR:

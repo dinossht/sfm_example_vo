@@ -11,16 +11,16 @@ import cv2
 from load_ros_camera_rtk import camRtkData
 
 
+# TODO: plot feature matches !!!
 # TODO: add prior factor for pose based on constant vel motion model
 # TODO: add smart projection factor/smart factor to solve bad map points
 
 # TODO: remove bad map points, negative depth etc. check pyslam
-# TODO: plott feature matching
 
 
 N = 10
 
-dat = camRtkData(630)
+dat = camRtkData(650)
 def next_frame():
     img_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
     for _ in range(N):
@@ -32,14 +32,23 @@ def main():
 
     sfm_frontend = SFM_frontend(2000, 0.7)
 
+    # Initialize
     img0, T0 = next_frame()
     img1, T1 = next_frame()
     sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1)
-
-    # Track a new frame
-    img, T = next_frame()
-    sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
     optimizer.full_bundle_adjustment_update(sfm_map)
+
+    #Track
+    for _ in range(7):
+        img, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
+    
+    #Optimize
+    for j in range(1):
+        optimizer.full_bundle_adjustment_update(sfm_map)
+
+    # Cull
+    sfm_frontend.cull_bad_map_points(sfm_map)
 
     def get_geometry():
         poses = sfm_map.get_keyframe_poses()
@@ -92,10 +101,9 @@ def main():
         sfm_frontend.create_new_map_points(sfm_map) 
 
         #Track Track 
-        img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
-        #img, T = next_frame()
-        #sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
+        for _ in range(7):
+            img, T = next_frame()
+            sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
 
         # Optimize
         for j in range(1):
