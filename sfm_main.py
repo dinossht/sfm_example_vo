@@ -21,6 +21,7 @@ from load_ros_camera_rtk import camRtkData
 N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec 
 
 dat = camRtkData(650)
+#dat = camRtkData(820) # trip 4 starting point
 IMU_data, IMU_times = dat.get_imu_in_body()
 GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
 
