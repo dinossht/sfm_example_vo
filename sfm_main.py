@@ -76,7 +76,7 @@ def main():
 
     def track_new_frame(vis):
         img, ts, T = next_frame()
-        #sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
         sfm_frontend.track_map_only_imu(sfm_map, img=img, rtk_pose=T, ts=ts)
 
         vis.clear_geometries()
@@ -170,7 +170,20 @@ def main():
 
         plt.suptitle("Trajectory in NED")
         plt.show()
-        
+
+    def iterate_imu(vis):
+        #Track Track 
+        for _ in range(7):
+            img, ts, T = next_frame()
+            sfm_frontend.track_map_only_imu(sfm_map, img=img, rtk_pose=T, ts=ts)
+
+        # Optimize
+        for j in range(1):
+            optimizer.full_bundle_adjustment_update(sfm_map)
+
+        vis.clear_geometries()
+        for geom in get_geometry():
+            vis.add_geometry(geom, reset_bounding_box=False)
 
     # Create visualizer.
     key_to_callback = {}
@@ -181,6 +194,7 @@ def main():
     key_to_callback[ord("I")] = iterate
     key_to_callback[ord("M")] = M_init_cam
     key_to_callback[ord("P")] = plot_2d_trajectory
+    key_to_callback[ord("U")] = iterate_imu
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 
 
