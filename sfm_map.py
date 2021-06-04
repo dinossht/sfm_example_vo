@@ -212,6 +212,8 @@ class Keyframe:
         self._pose_w_c = pose_w_c
         self._map_points = {}
         self._has_been_optimized = False
+
+        self.current_imu_pose = None
         self.current_bias = None
         self.current_vel = None
         

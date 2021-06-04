@@ -76,7 +76,8 @@ def main():
 
     def track_new_frame(vis):
         img, ts, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
+        #sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
+        sfm_frontend.track_map_only_imu(sfm_map, img=img, rtk_pose=T, ts=ts)
 
         vis.clear_geometries()
         for geom in get_geometry():

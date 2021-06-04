@@ -7,7 +7,7 @@ from parameters import param
 import gtsam
 
 
-MAX_DEPTH = 100 # in meter
+MAX_DEPTH = 200 # in meter
 MIN_DEPTH = 0.5
 MIN_NUM_OBS = 3
 MAX_PIXEL_ERR = 5
@@ -217,8 +217,10 @@ class SFM_frontend:
         current_vel = (kf_1.rtk_pose[:3,3] - kf_0.rtk_pose[:3,3]) / (kf_1.ts - kf_0.ts) 
         current_bias = gtsam.imuBias.ConstantBias(np.zeros((3,)), np.zeros((3,)))  # acc, gyro
         
+        kf_0.current_imu_pose = gtsam.Pose3(kf_0.rtk_pose)
         kf_0.current_vel = current_vel
         kf_0.current_bias = current_bias
+        kf_1.current_imu_pose = gtsam.Pose3(kf_1.rtk_pose)
         kf_1.current_vel = current_vel
         kf_1.current_bias = current_bias
 
@@ -309,6 +311,7 @@ class SFM_frontend:
 
         # Add keyframe to map
         kf = Keyframe(matched_frame, pose_0_2, rtk_pose, ts)
+        kf.current_imu_pose = sfm_map.get_keyframe(kf.id()-1).current_imu_pose
         kf.current_vel = sfm_map.get_keyframe(kf.id()-1).current_vel
         kf.current_bias = sfm_map.get_keyframe(kf.id()-1).current_bias
 
@@ -330,6 +333,17 @@ class SFM_frontend:
             curr_track = FeatureTrack()
             matched_frame.add_keypoint(det_id, KeyPoint(det_point, color, curr_track))
 
+        return sfm_map
+
+    def track_map_only_imu(self, sfm_map, img_path=None, img=None, rtk_pose=None, ts=None):
+        frame_idx = sfm_map._cur_keyframe_id + 1
+        matched_frame = MatchedFrame(frame_idx, PerspectiveCamera(self.f, self.principal_point), img_path, img)
+        kf = Keyframe(matched_frame, SE3(), rtk_pose, ts)
+        kf.current_imu_pose = sfm_map.get_keyframe(kf.id()-1).current_imu_pose
+        kf.current_vel = sfm_map.get_keyframe(kf.id()-1).current_vel
+        kf.current_bias = sfm_map.get_keyframe(kf.id()-1).current_bias
+
+        sfm_map.add_keyframe(kf)
         return sfm_map
 
     def create_new_map_points(self, sfm_map):
