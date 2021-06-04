@@ -341,7 +341,8 @@ class SfmMap:
 
         self.IMU_data = None
         self.IMU_times = None
-
+        self.GNSS_data = None
+        self.GNSS_times = None
 
     def set_latest_map_points(self, latest_map_points):
         self._latest_map_points = latest_map_points

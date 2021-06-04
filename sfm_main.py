@@ -22,6 +22,13 @@ N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec
 
 dat = camRtkData(650)
 IMU_data, IMU_times = dat.get_imu_in_body()
+GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
+
+plt.plot(GNSS2_data[:,0]-equiv_rtk_data[:,0])
+plt.plot(GNSS2_data[:,1]-equiv_rtk_data[:,1])
+plt.plot(GNSS2_data[:,2]-equiv_rtk_data[:,2])
+plt.show()
+
 
 def next_frame():
     img_out, timestamp_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
@@ -37,7 +44,7 @@ def main():
     # Initialize
     img0, ts0, T0 = next_frame()
     img1, ts1, T1 = next_frame()
-    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1, ts0=ts0, ts1=ts1, IMU_data=IMU_data, IMU_times=IMU_times)
+    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1, ts0=ts0, ts1=ts1, IMU_data=IMU_data, IMU_times=IMU_times, GNSS_data=GNSS2_data, GNSS_times=GNSS2_times)
     optimizer.full_bundle_adjustment_update(sfm_map)
 
     #Track

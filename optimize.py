@@ -9,8 +9,9 @@ from parameters import param
 
 
 ADD_RTK_PRIOR = False
+ADD_GPS_PRIOR = True
 ADD_IMU_FACTOR = True
-ADD_CAMERA_FACTOR = False
+ADD_CAMERA_FACTOR = True
 
 """Setup IMU preintegration and bias parameters"""
 AccSigma        = 0.01
@@ -122,7 +123,7 @@ class BatchBundleAdjustment:
         graph.push_back(factor)
         """
 
-        # Add position prior (RTK or GPS)
+        # Add position prior RTK
         if ADD_RTK_PRIOR:
             for keyframe in sfm_map.get_keyframes():
                 inv_sigma = 100
@@ -131,6 +132,24 @@ class BatchBundleAdjustment:
                 prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
                 factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
                 graph.push_back(factor)
+
+        # Add position prior
+        if ADD_GPS_PRIOR:
+            for keyframe in sfm_map.get_keyframes():
+                inv_sigma = 10
+                if ADD_CAMERA_FACTOR:
+                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 0 * inv_sigma]))
+                else:
+                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 3 * inv_sigma]))
+
+                time_diff =  np.min(np.abs(sfm_map.GNSS_times - keyframe.ts)) 
+                #assert time_diff < 0.05, f"large time diff gps vs keyframe. timediff: {time_diff}"
+                if time_diff < 0.05:
+                    gnss_idx = np.argmin(np.abs(sfm_map.GNSS_times - keyframe.ts))
+                    prior_pos = sfm_map.GNSS_data[gnss_idx,:]
+                    prior_pose = gtsam.Pose3(gtsam.Rot3(), prior_pos)
+                    factor = gtsam.PriorFactorPose3(X(keyframe.id()), prior_pose, uncertainty_in_pos)
+                    graph.push_back(factor)
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()

@@ -3,6 +3,7 @@ from ground_truth import ROSGroundTruth
 import matplotlib.pyplot as plt
 from coordinate_transformations import R_cam_imu_matrix
 import numpy as np
+from scipy import signal
 
 
 def plot_trajectory(fignum, poses, scale=1, title="Plot Trajectory", axis_labels=('X axis', 'Y axis', 'Z axis')):
@@ -92,7 +93,7 @@ class camRtkData:
     def __init__(self, t_start):
         self.init = False
 
-        trip_nr = 3
+        trip_nr = 3  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
         self.dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", t_start, -1)
         self.gt = ROSGroundTruth(f"dataset/groundtruths/obsv_estimates ({trip_nr}).mat", "dataset/groundtruths/ned_origin.mat", trip_nr)
 
@@ -130,3 +131,24 @@ class camRtkData:
     def get_imu_in_body(self):
         IMU_data, IMU_times = self.dat.get_imu_acc_gyro_in_body()
         return IMU_data, IMU_times
+
+    def get_gnss2_pose_in_ned(self):
+        # GNSS 2 is more robust
+        GNSS2_data, GNSS2_times = self.dat.get_gnss_in_NED(gnss_type=2, origin_lat0=self.gt.lat0, origin_lon0=self.gt.lon0, origin_hei0=self.gt.height0)
+        # Upsample by 100X, meaning 
+        xvals = np.linspace(GNSS2_times[0], GNSS2_times[-1], len(GNSS2_times) * 100)
+        x = np.interp(xvals, GNSS2_times, GNSS2_data[:, 0])
+        y = np.interp(xvals, GNSS2_times, GNSS2_data[:, 1])
+        z = np.interp(xvals, GNSS2_times, GNSS2_data[:, 2])
+        GNSS2_data = np.array([x, y, z]).T
+        GNSS2_times = xvals
+        gnss2_pos_body = []
+        rtk_arr = []
+        for pos, ts in zip(GNSS2_data, GNSS2_times):
+            # RTK gt pose
+            T = self.gt.get_T_body(ts)
+            gnss2_origoB_b_g = np.array([3.285, 0, -1.4])
+            posB = pos - T[:3,:3] @ gnss2_origoB_b_g
+            gnss2_pos_body.append(posB)
+            rtk_arr.append(T[:3,3])
+        return np.array(gnss2_pos_body), GNSS2_times, np.array(rtk_arr)

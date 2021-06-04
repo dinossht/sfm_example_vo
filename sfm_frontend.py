@@ -69,7 +69,7 @@ class SFM_frontend:
         self.principal_point = np.array([[9.6550e+02, 6.0560e+02]]).T
         self.K = K
 
-    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pose0=None, rtk_pose1=None, ts0=None, ts1=None, IMU_data=None, IMU_times=None):
+    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pose0=None, rtk_pose1=None, ts0=None, ts1=None, IMU_data=None, IMU_times=None, GNSS_data=None, GNSS_times=None):
         print("Initializing")
         print("#" * 20)
         # Init match frames
@@ -205,6 +205,8 @@ class SFM_frontend:
         sfm_map = SfmMap()
         sfm_map.IMU_data = IMU_data
         sfm_map.IMU_times = IMU_times
+        sfm_map.GNSS_data = GNSS_data
+        sfm_map.GNSS_times = GNSS_times
 
         # Add first keyframe as reference frame.
         kf_0 = Keyframe(matched_frames[0], pose0, rtk_pose0, ts0)
