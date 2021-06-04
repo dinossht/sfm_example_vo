@@ -24,10 +24,6 @@ dat = camRtkData(650)
 IMU_data, IMU_times = dat.get_imu_in_body()
 GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
 
-plt.plot(GNSS2_data[:,0]-equiv_rtk_data[:,0])
-plt.plot(GNSS2_data[:,1]-equiv_rtk_data[:,1])
-plt.plot(GNSS2_data[:,2]-equiv_rtk_data[:,2])
-plt.show()
 
 
 def next_frame():
@@ -162,7 +158,7 @@ def main():
         plt.ylabel("x [m]")
 
         plt.subplot(312)
-        norm_xy= np.linalg.norm(pos_est_ned_arr[:, :1] - pos_gt_ned_arr[:, :1], axis=1, ord=1) # L1 norm
+        norm_xy = np.linalg.norm(pos_est_ned_arr[:, :2] - pos_gt_ned_arr[:, :2], axis=1, ord=1) # L1 norm
         plt.plot(norm_xy)
         #plt.ylim([-0.1, 1])
         plt.ylabel("xy L1 norm error [m]")

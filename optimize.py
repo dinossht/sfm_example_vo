@@ -8,10 +8,10 @@ import matplotlib.pyplot as plt
 from parameters import param
 
 
-ADD_RTK_PRIOR = False
+ADD_RTK_PRIOR = False #True
 ADD_GPS_PRIOR = True
 ADD_IMU_FACTOR = True
-ADD_CAMERA_FACTOR = True
+ADD_CAMERA_FACTOR = False #True
 
 """Setup IMU preintegration and bias parameters"""
 AccSigma        = 0.01
@@ -59,8 +59,7 @@ class BatchBundleAdjustment:
         R_xyz_zxy = np.array([[0, 0, 1],
                               [1, 0, 0],
                               [0, 1, 0]])
-        R_b_c = R_z(13) @ R_y(-1.5) @ R_xyz_zxy
-        #R_b_c = R_z(13) @ R_xyz_zxy
+        R_b_c = R_z(13) @ R_y(-1.75) @ R_xyz_zxy
         T_b_c = np.eye(4)
         T_b_c[:3,:3] = R_b_c
         T_b_c[:3,3] = tB_b_c
@@ -99,7 +98,14 @@ class BatchBundleAdjustment:
         kf0_R_w_b = kf0_T_w_b[:3,:3]
         kf0_tW_w_b = kf0_T_w_b[:3,3]
 
+        # USE gps z-measurement
+        if ADD_CAMERA_FACTOR and ADD_GPS_PRIOR and not ADD_RTK_PRIOR:
+            gnss_idx = np.argmin(np.abs(sfm_map.GNSS_times - kf_0.ts))
+            prior_pos = sfm_map.GNSS_data[gnss_idx,:]
+            kf0_tW_w_b[2] = prior_pos[2]
+
         kf0_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf0_R_w_b), kf0_tW_w_b)
+            
         factor = gtsam.PriorFactorPose3(X(kf_0.id()), kf0_pose_w_b, no_uncertainty_in_pose)
         graph.push_back(factor)
         
@@ -110,6 +116,12 @@ class BatchBundleAdjustment:
         kf1_T_w_b = kf_1.rtk_pose.copy()
         kf1_R_w_b = kf1_T_w_b[:3,:3]
         kf1_tW_w_b = kf1_T_w_b[:3,3]
+
+        # USE gps z-measurement
+        if ADD_GPS_PRIOR and not ADD_RTK_PRIOR:
+            gnss_idx = np.argmin(np.abs(sfm_map.GNSS_times - kf_1.ts))
+            prior_pos = sfm_map.GNSS_data[gnss_idx,:]
+            kf1_tW_w_b[2] = prior_pos[2]
 
         kf1_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf1_R_w_b), kf1_tW_w_b)
         factor = gtsam.PriorFactorPose3(X(kf_1.id()), kf1_pose_w_b, no_uncertainty_in_pose)
@@ -136,11 +148,11 @@ class BatchBundleAdjustment:
         # Add position prior
         if ADD_GPS_PRIOR:
             for keyframe in sfm_map.get_keyframes():
-                inv_sigma = 10
+                inv_sigma = 100
                 if ADD_CAMERA_FACTOR:
-                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 0 * inv_sigma]))
+                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 0.5 * inv_sigma]))
                 else:
-                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 3 * inv_sigma]))
+                    uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 0.5 * inv_sigma]))
 
                 time_diff =  np.min(np.abs(sfm_map.GNSS_times - keyframe.ts)) 
                 #assert time_diff < 0.05, f"large time diff gps vs keyframe. timediff: {time_diff}"

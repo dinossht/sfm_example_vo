@@ -104,8 +104,7 @@ class SFM_frontend:
         R_xyz_zxy = np.array([[0, 0, 1],
                               [1, 0, 0],
                               [0, 1, 0]])
-        R_b_c = R_z(13) @ R_y(-1.5) @ R_xyz_zxy
-        #R_b_c = R_z(13) @ R_xyz_zxy
+        R_b_c = R_z(13) @ R_y(-1.75) @ R_xyz_zxy
         T_b_c = np.eye(4)
         T_b_c[:3,:3] = R_b_c
         T_b_c[:3,3] = tB_b_c  # pose of camera in body frame
@@ -498,7 +497,7 @@ class SFM_frontend:
                 # Less than three keyframe views
                 # too far away
                 # behind the camera
-                if map_point.num_observations() < MIN_NUM_OBS or map_point._point_w[2] > MAX_DEPTH:
+                if map_point.num_observations() < MIN_NUM_OBS or np.linalg.norm(map_point._point_w) > MAX_DEPTH:
                     bad_keypoint_ids.append(keypoint_id)
             bad_observations[keyframe.id()] = bad_keypoint_ids
                     
@@ -509,13 +508,13 @@ class SFM_frontend:
         # Delete points from map
         bad_map_point_ids = []
         for map_point in sfm_map.get_map_points():
-            if map_point.num_observations() < MIN_NUM_OBS:
+            if map_point.num_observations() < MIN_NUM_OBS or np.linalg.norm(map_point._point_w) > MAX_DEPTH:
                 bad_map_point_ids.append(map_point.id())
         [sfm_map.remove_map_point(map_point_id) for map_point_id in bad_map_point_ids]
 
         # Delete points from latest map points
         bad_map_points = []
         for map_point in sfm_map.get_latest_map_points():
-            if map_point.num_observations() < MIN_NUM_OBS:
+            if map_point.num_observations() < MIN_NUM_OBS or np.linalg.norm(map_point._point_w) > MAX_DEPTH:
                 bad_map_points.append(map_point)
         [sfm_map.remove_map_point_latest(map_point) for map_point in bad_map_points]
