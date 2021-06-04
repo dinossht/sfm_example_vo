@@ -10,6 +10,7 @@ from parameters import param
 
 ADD_RTK_PRIOR = False
 ADD_IMU_FACTOR = True
+ADD_CAMERA_FACTOR = False
 
 """Setup IMU preintegration and bias parameters"""
 AccSigma        = 0.01
@@ -65,18 +66,19 @@ class BatchBundleAdjustment:
         body_P_sensor_cam = gtsam.Pose3(gtsam.Rot3(R_b_c), tB_b_c)
         T_c_b = np.linalg.inv(T_b_c)
 
-        # Add measurements.
-        for keyframe in sfm_map.get_keyframes():
-            for keypoint_id, map_point in keyframe.get_observations().items():
-                assert len(map_point.get_observations()) >= 2, "Less than two camera views"
-                obs_point = keyframe.get_keypoint(keypoint_id).point()
-                factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
-                                                              X(keyframe.id()), L(map_point.id()),
-                                                              calibration,
-                                                              body_P_sensor_cam)
-                error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
-                #assert error < 50, str(error)
-                graph.push_back(factor)
+        if ADD_CAMERA_FACTOR:
+            # Add measurements.
+            for keyframe in sfm_map.get_keyframes():
+                for keypoint_id, map_point in keyframe.get_observations().items():
+                    assert len(map_point.get_observations()) >= 2, "Less than two camera views"
+                    obs_point = keyframe.get_keypoint(keypoint_id).point()
+                    factor = gtsam.GenericProjectionFactorCal3_S2(obs_point, obs_uncertainty,
+                                                                X(keyframe.id()), L(map_point.id()),
+                                                                calibration,
+                                                                body_P_sensor_cam)
+                    error = uv_to_X_error(obs_point.T, K, keyframe.pose_w_c().inverse(), map_point.point_w())
+                    #assert error < 50, str(error)
+                    graph.push_back(factor)
 
         # Set prior on the first camera (which we will assume defines the reference frame).
         # NOTE: prior is for the pose in body frame
@@ -134,9 +136,6 @@ class BatchBundleAdjustment:
         initial_estimate = gtsam.Values()
 
         if ADD_IMU_FACTOR:
-            #current_vel = (kf_1.rtk_pose[:3,3] - kf_0.rtk_pose[:3,3]) / (kf_1.ts - kf_0.ts) 
-            #current_bias = gtsam.imuBias.ConstantBias(np.zeros((3,)), np.zeros((3,)))  # acc, gyro
-
             # Add IMU priors
             for i, keyframe in enumerate(sfm_map.get_keyframes()):
                 ts_cur = keyframe.ts
@@ -192,28 +191,32 @@ class BatchBundleAdjustment:
 
                 ts_prev = ts_cur
 
+        if ADD_CAMERA_FACTOR:
+            for keyframe in sfm_map.get_keyframes():
 
-        for keyframe in sfm_map.get_keyframes():
+                # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
+                # NOTE: prior is for the pose in body frame
+                kf_R_w_c = keyframe.pose_w_c()._rotation._matrix
+                kf_tW_w_c = keyframe.pose_w_c()._translation.squeeze()
 
-            # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
-            # NOTE: prior is for the pose in body frame
-            kf_R_w_c = keyframe.pose_w_c()._rotation._matrix
-            kf_tW_w_c = keyframe.pose_w_c()._translation.squeeze()
+                kf_T_w_c = np.eye(4)
+                kf_T_w_c[:3,:3] = kf_R_w_c
+                kf_T_w_c[:3,3] = kf_tW_w_c
 
-            kf_T_w_c = np.eye(4)
-            kf_T_w_c[:3,:3] = kf_R_w_c
-            kf_T_w_c[:3,3] = kf_tW_w_c
+                kf_T_w_b = kf_T_w_c @ T_c_b
+                kf_R_w_b = kf_T_w_b[:3,:3]
+                kf_tW_w_b = kf_T_w_b[:3,3]
 
-            kf_T_w_b = kf_T_w_c @ T_c_b
-            kf_R_w_b = kf_T_w_b[:3,:3]
-            kf_tW_w_b = kf_T_w_b[:3,3]
-
-            kf_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf_R_w_b), kf_tW_w_b)
-            initial_estimate.insert(X(keyframe.id()), kf_pose_w_b)
-
-        for map_point in sfm_map.get_map_points():
-            point_w = gtsam.Point3(map_point.point_w().squeeze())
-            initial_estimate.insert(L(map_point.id()), point_w)
+                kf_pose_w_b = gtsam.Pose3(gtsam.Rot3(kf_R_w_b), kf_tW_w_b)
+                initial_estimate.insert(X(keyframe.id()), kf_pose_w_b)
+        
+            for map_point in sfm_map.get_map_points():
+                point_w = gtsam.Point3(map_point.point_w().squeeze())
+                initial_estimate.insert(L(map_point.id()), point_w)
+        
+        if not ADD_CAMERA_FACTOR:
+            for keyframe in sfm_map.get_keyframes():
+                initial_estimate.insert(X(keyframe.id()), keyframe.current_imu_pose)
 
         # Optimize the graph.
         params = gtsam.LevenbergMarquardtParams()
@@ -235,11 +238,14 @@ class BatchBundleAdjustment:
             keyframe.update_pose_w_c(SE3.from_matrix(updated_pose_w_c))
 
             if ADD_IMU_FACTOR:
+                if not ADD_CAMERA_FACTOR:
+                    keyframe.current_imu_pose = result.atPose3(X(keyframe.id()))
                 keyframe.current_vel = result.atVector(V(keyframe.id()))
                 keyframe.current_bias = result.atConstantBias(B(keyframe.id()))
 
-        for map_point in sfm_map.get_map_points():
-            updated_point_w = result.atPoint3(L(map_point.id())).reshape(3, 1)
-            map_point.update_point_w(updated_point_w)
+        if ADD_CAMERA_FACTOR:
+            for map_point in sfm_map.get_map_points():
+                updated_point_w = result.atPoint3(L(map_point.id())).reshape(3, 1)
+                map_point.update_point_w(updated_point_w)
 
         sfm_map.has_been_updated()
