@@ -9,14 +9,31 @@ from parameters import param
 
 
 ADD_RTK_PRIOR = False
+ADD_IMU_FACTOR = True
+
+"""Setup IMU preintegration and bias parameters"""
+AccSigma        = 0.01
+GyroSigma       = 0.000175
+IntSigma        = 0.000167  # integtation sigma
+AccBiasSigma    = 2.91e-006
+GyroBiasSigma   = 0.0100395199348279
+preintegration_param = gtsam.PreintegrationParams(np.array([0, 0, 9.82175]))
+preintegration_param.setAccelerometerCovariance(AccSigma ** 2 * np.eye(3))
+preintegration_param.setGyroscopeCovariance(GyroSigma ** 2 * np.eye(3))
+preintegration_param.setIntegrationCovariance(IntSigma ** 2 * np.eye(3))
+preintegration_param.setOmegaCoriolis(np.array([0, 0, 0]))  # account for earth's rotation
+sigmaBetweenBias = np.array([AccBiasSigma, AccBiasSigma, AccBiasSigma, GyroBiasSigma, GyroBiasSigma, GyroBiasSigma])
 
 class BatchBundleAdjustment:
     def full_bundle_adjustment_update(self, sfm_map: SfmMap):
         # Variable symbols for camera poses.
         X = gtsam.symbol_shorthand.X
-
         # Variable symbols for observed 3D point "landmarks".
         L = gtsam.symbol_shorthand.L
+        # Variable symbols for IMU velocity
+        V = gtsam.symbol_shorthand.V
+        # Variable symbols for IMU bias
+        B = gtsam.symbol_shorthand.B
 
         # Create a factor graph.
         graph = gtsam.NonlinearFactorGraph()
@@ -115,6 +132,67 @@ class BatchBundleAdjustment:
 
         # Set initial estimates from map.
         initial_estimate = gtsam.Values()
+
+        if ADD_IMU_FACTOR:
+            #current_vel = (kf_1.rtk_pose[:3,3] - kf_0.rtk_pose[:3,3]) / (kf_1.ts - kf_0.ts) 
+            #current_bias = gtsam.imuBias.ConstantBias(np.zeros((3,)), np.zeros((3,)))  # acc, gyro
+
+            # Add IMU priors
+            for i, keyframe in enumerate(sfm_map.get_keyframes()):
+                ts_cur = keyframe.ts
+
+                if i == 0:
+                    # Create initial estimate and prior on initial pose, velocity, and biases
+                    #sigma_init_x = gtsam.noiseModel.Isotropic.Precisions([0.0, 0.0, 0.0, 1e-5, 1e-5, 1e-5])  # R, T
+                    sigma_init_v = gtsam.noiseModel.Isotropic.Sigma(3, 1000.0)
+                    sigma_init_b = gtsam.noiseModel.Isotropic.Sigmas([0.1, 0.1, 0.1, 5e-05, 5e-05, 5e-05])  # acc, gyro
+
+                    initial_estimate.insert(V(keyframe.id()), keyframe.current_vel)
+                    initial_estimate.insert(B(keyframe.id()), keyframe.current_bias)
+
+                    factor_vel = gtsam.PriorFactorVector(V(keyframe.id()), keyframe.current_vel, sigma_init_v)
+                    factor_bias = gtsam.PriorFactorConstantBias(B(keyframe.id()), keyframe.current_bias, sigma_init_b)
+
+                    graph.push_back(factor_vel)
+                    graph.push_back(factor_bias)
+
+                else:
+                    ## Summarize IMU data between the previous GNSS measurement and current GNSS measurement
+                    IMUindices = np.argwhere((sfm_map.IMU_times >= ts_prev) & (sfm_map.IMU_times <= ts_cur)).squeeze()
+                    currentSummarizedMeasurement = gtsam.PreintegratedImuMeasurements(preintegration_param, keyframe.current_bias)
+                    for imuIndex in IMUindices:
+                        accMeas = sfm_map.IMU_data[imuIndex, :3]
+                        omegaMeas = sfm_map.IMU_data[imuIndex, 3:]
+                        deltaT = 1 / 250  # imu freq
+                        currentSummarizedMeasurement.integrateMeasurement(accMeas, omegaMeas, deltaT)
+                    
+                    ## Create IMU factor
+                    factor_imu = gtsam.ImuFactor(
+                        X(keyframe.id()-1),
+                        V(keyframe.id()-1), 
+                        X(keyframe.id()),
+                        V(keyframe.id()), 
+                        B(keyframe.id()-1), 
+                        currentSummarizedMeasurement
+                    )
+                    graph.push_back(factor_imu)
+
+                    ## Bias evolution as given in the IMU metadata
+                    factor_bias = gtsam.BetweenFactorConstantBias(
+                        B(keyframe.id()-1), 
+                        B(keyframe.id()), 
+                        gtsam.imuBias.ConstantBias(np.zeros((3, 1)), np.zeros((3, 1))),
+                        gtsam.noiseModel.Diagonal.Sigmas(np.sqrt(len(IMUindices)) * sigmaBetweenBias)
+                    )
+                    graph.push_back(factor_bias)
+
+                    ## Add initial values
+                    initial_estimate.insert(V(keyframe.id()), keyframe.current_vel)
+                    initial_estimate.insert(B(keyframe.id()), keyframe.current_bias)
+
+                ts_prev = ts_cur
+
+
         for keyframe in sfm_map.get_keyframes():
 
             # Calculate pose of body frame given in world frame using camera pose (pose_w_c)
@@ -155,6 +233,10 @@ class BatchBundleAdjustment:
             updated_pose_w_c = updated_pose_w_b @ T_b_c
 
             keyframe.update_pose_w_c(SE3.from_matrix(updated_pose_w_c))
+
+            if ADD_IMU_FACTOR:
+                keyframe.current_vel = result.atVector(V(keyframe.id()))
+                keyframe.current_bias = result.atConstantBias(B(keyframe.id()))
 
         for map_point in sfm_map.get_map_points():
             updated_point_w = result.atPoint3(L(map_point.id())).reshape(3, 1)

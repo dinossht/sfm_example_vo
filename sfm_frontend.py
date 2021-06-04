@@ -4,6 +4,7 @@ from frontend import *
 from utils import *
 from sfm_frontend_utils import *
 from parameters import param
+import gtsam
 
 
 MAX_DEPTH = 1e10 # in meter
@@ -68,7 +69,7 @@ class SFM_frontend:
         self.principal_point = np.array([[9.6550e+02, 6.0560e+02]]).T
         self.K = K
 
-    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pose0=None, rtk_pose1=None):
+    def initialize(self, img0_path=None, img1_path=None, img0=None, img1=None, rtk_pose0=None, rtk_pose1=None, ts0=None, ts1=None, IMU_data=None, IMU_times=None):
         print("Initializing")
         print("#" * 20)
         # Init match frames
@@ -202,12 +203,24 @@ class SFM_frontend:
         
 
         sfm_map = SfmMap()
+        sfm_map.IMU_data = IMU_data
+        sfm_map.IMU_times = IMU_times
+
         # Add first keyframe as reference frame.
-        kf_0 = Keyframe(matched_frames[0], pose0, rtk_pose0)
+        kf_0 = Keyframe(matched_frames[0], pose0, rtk_pose0, ts0)
         sfm_map.add_keyframe(kf_0)
         # Add second keyframe from relative pose.
-        kf_1 = Keyframe(matched_frames[1], pose1, rtk_pose1)
+        kf_1 = Keyframe(matched_frames[1], pose1, rtk_pose1, ts1)
         sfm_map.add_keyframe(kf_1)
+
+        # Add keyframe1 intial bias and velocity
+        current_vel = (kf_1.rtk_pose[:3,3] - kf_0.rtk_pose[:3,3]) / (kf_1.ts - kf_0.ts) 
+        current_bias = gtsam.imuBias.ConstantBias(np.zeros((3,)), np.zeros((3,)))  # acc, gyro
+        
+        kf_0.current_vel = current_vel
+        kf_0.current_bias = current_bias
+        kf_1.current_vel = current_vel
+        kf_1.current_bias = current_bias
 
         # Calculate initial yaw angle offset
         heading_vector = kf_1.pose_w_c().translation - kf_0.pose_w_c().translation
@@ -247,7 +260,7 @@ class SFM_frontend:
         sfm_map.set_latest_map_points(latest_map_points)
         return sfm_map
 
-    def track_map(self, sfm_map, img_path=None, img=None, rtk_pose=None):
+    def track_map(self, sfm_map, img_path=None, img=None, rtk_pose=None, ts=None):
         print("Tracking")
         print("#" * 20)
         frame_idx = sfm_map._cur_keyframe_id + 1
@@ -295,7 +308,10 @@ class SFM_frontend:
         pose_0_2 = estimate_pose_from_map_correspondences(self.K, feat_track[1].good_kps().T, points3d_map_matched.T) # pose_w_c, w == world_frame, new == cam_frame
 
         # Add keyframe to map
-        kf = Keyframe(matched_frame, pose_0_2, rtk_pose)
+        kf = Keyframe(matched_frame, pose_0_2, rtk_pose, ts)
+        kf.current_vel = sfm_map.get_keyframe(kf.id()-1).current_vel
+        kf.current_bias = sfm_map.get_keyframe(kf.id()-1).current_bias
+
         sfm_map.add_keyframe(kf)
 
         color_img = matched_frame.load_image()
