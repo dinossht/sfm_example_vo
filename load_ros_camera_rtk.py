@@ -125,20 +125,8 @@ class camRtkData:
     def get_img_and_rtk_pose_of_body_in_ned(self):
         img, _, timestamp = self.dat.get_image()
         T = self.gt.get_T_body(timestamp)
-        return img, T
+        return img, timestamp, T
 
-"""
-dat = camRtkData()
-
-poses = []
-for _ in range(20):#510
-    img, T = dat.get_img_rtk_pos_in_IMU()
-    poses.append(T)
-    
-plot_trajectory(1, poses)
-set_axes_equal(1)        
-plt.show()
-"""
-
-
-
+    def get_imu_in_body(self):
+        IMU_data, IMU_times = self.dat.get_imu_acc_gyro_in_body()
+        return IMU_data, IMU_times

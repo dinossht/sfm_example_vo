@@ -206,14 +206,17 @@ class MatchedFrame:
 
 
 class Keyframe:
-    def __init__(self, frame: MatchedFrame, pose_w_c: SE3, rtk_pose):
+    def __init__(self, frame: MatchedFrame, pose_w_c: SE3, rtk_pose, ts):
         self._id = frame.id()
         self._frame = frame
         self._pose_w_c = pose_w_c
         self._map_points = {}
         self._has_been_optimized = False
+        self.current_bias = None
+        self.current_vel = None
         
         self.rtk_pose = rtk_pose
+        self.ts = ts
 
     def id(self):
         return self._id
@@ -333,6 +336,9 @@ class SfmMap:
         self.result = None
 
         self._cur_keyframe_id = -1
+
+        self.IMU_data = None
+        self.IMU_times = None
 
 
     def set_latest_map_points(self, latest_map_points):

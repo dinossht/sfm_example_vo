@@ -181,6 +181,16 @@ class ROSDataset:
             IMU_times[i] = t.to_sec()
         return IMU_data, IMU_times
 
+    def get_imu_acc_gyro_in_body(self):
+        IMU_data, IMU_times = self.get_imu_acc_gyro()
+        print("\n-- Transform IMU data to body frame")
+        R_b_i = np.array([[0, 1, 0],
+                          [1, 0, 0],
+                          [0, 0,-1]])
+        IMU_data[:, :3] = (R_b_i @ IMU_data[:, :3].T).T
+        IMU_data[:, 3:] = (R_b_i @ IMU_data[:, 3:].T).T
+        return IMU_data, IMU_times
+
     def close(self):
         """Close bag file"""
         print("Closing bag ...")

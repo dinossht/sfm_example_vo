@@ -18,14 +18,16 @@ from load_ros_camera_rtk import camRtkData
 # TODO: remove bad map points, negative depth etc. check pyslam
 
 
-N = 10
+N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec 
 
 dat = camRtkData(650)
+IMU_data, IMU_times = dat.get_imu_in_body()
+
 def next_frame():
-    img_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
-    for _ in range(N):
-        img, T = dat.get_img_and_rtk_pose_of_body_in_ned()
-    return img_out, T_out
+    img_out, timestamp_out, T_out = dat.get_img_and_rtk_pose_of_body_in_ned()
+    for _ in range(N - 1):
+        img, timestamp, T = dat.get_img_and_rtk_pose_of_body_in_ned()
+    return img_out, timestamp_out, T_out
 
 def main():
     optimizer = BatchBundleAdjustment()
@@ -33,15 +35,15 @@ def main():
     sfm_frontend = SFM_frontend(2000, 0.7)
 
     # Initialize
-    img0, T0 = next_frame()
-    img1, T1 = next_frame()
-    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1)
+    img0, ts0, T0 = next_frame()
+    img1, ts1, T1 = next_frame()
+    sfm_map = sfm_frontend.initialize(img0=img0, img1=img1, rtk_pose0=T0, rtk_pose1=T1, ts0=ts0, ts1=ts1, IMU_data=IMU_data, IMU_times=IMU_times)
     optimizer.full_bundle_adjustment_update(sfm_map)
 
     #Track
     for _ in range(7):
-        img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
+        img, ts, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
     
     #Optimize
     for j in range(1):
@@ -73,8 +75,8 @@ def main():
             vis.add_geometry(geom, reset_bounding_box=False)
 
     def track_new_frame(vis):
-        img, T = next_frame()
-        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
+        img, ts, T = next_frame()
+        sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
 
         vis.clear_geometries()
         for geom in get_geometry():
@@ -102,8 +104,8 @@ def main():
 
         #Track Track 
         for _ in range(7):
-            img, T = next_frame()
-            sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T)
+            img, ts, T = next_frame()
+            sfm_frontend.track_map(sfm_map, img=img, rtk_pose=T, ts=ts)
 
         # Optimize
         for j in range(1):
