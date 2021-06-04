@@ -11,7 +11,7 @@ from parameters import param
 ADD_RTK_PRIOR = False #True
 ADD_GPS_PRIOR = True
 ADD_IMU_FACTOR = True
-ADD_CAMERA_FACTOR = False #True
+ADD_CAMERA_FACTOR = True
 
 """Setup IMU preintegration and bias parameters"""
 AccSigma        = 0.01
