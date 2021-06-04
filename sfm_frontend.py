@@ -7,10 +7,10 @@ from parameters import param
 import gtsam
 
 
-MAX_DEPTH = 1e10 # in meter
+MAX_DEPTH = 100 # in meter
 MIN_DEPTH = 0.5
 MIN_NUM_OBS = 3
-MAX_PIXEL_ERR = 50#5
+MAX_PIXEL_ERR = 5
 FILT_DEPTH = True
 cos_max_parallax = 0.99999
 
@@ -482,7 +482,7 @@ class SFM_frontend:
                 # Less than three keyframe views
                 # too far away
                 # behind the camera
-                if map_point.num_observations() < MIN_NUM_OBS:
+                if map_point.num_observations() < MIN_NUM_OBS or map_point._point_w[2] > MAX_DEPTH:
                     bad_keypoint_ids.append(keypoint_id)
             bad_observations[keyframe.id()] = bad_keypoint_ids
                     
