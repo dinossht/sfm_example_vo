@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib.font_manager
 import numpy as np
+import datetime
 
 
-def plot_xy_data(data, ref_data, xlabel="y (m)", ylabel="x (m)"):
+def plot_xy_data(data, ref_data, xlabel="y (m)", ylabel="x (m)", savename=None):
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -18,7 +19,10 @@ def plot_xy_data(data, ref_data, xlabel="y (m)", ylabel="x (m)"):
     plt.legend(loc="upper left")
     plt.grid()
 
-def plot_xy_data_w_error(data, ref_data, xlabel="y (m)", ylabel="x (m)"):
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
+
+def plot_xy_data_w_error(data, ref_data, xlabel="y (m)", ylabel="x (m)", savename=None):
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -41,9 +45,11 @@ def plot_xy_data_w_error(data, ref_data, xlabel="y (m)", ylabel="x (m)"):
 
     plt.xlabel(ylabel)
     plt.ylabel(xlabel)
-    plt.show()
 
-def plot_xyz(data, ref_data, timestamp):
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
+
+def plot_xyz(data, ref_data, timestamp, savename=None):
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -53,25 +59,30 @@ def plot_xyz(data, ref_data, timestamp):
     plt.plot(timestamp, data[:, 0], color="blue", alpha=0.7)
     plt.ylabel("x (m)")
     plt.legend(loc="upper left")
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.grid()
 
     plt.subplot(312)
     plt.plot(timestamp, ref_data[:, 1], color="black", linestyle="dashed", label="reference")
     plt.plot(timestamp, data[:, 1], color="blue", alpha=0.7)
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.ylabel("y (m)")
     plt.grid()
 
     plt.subplot(313)
     plt.plot(timestamp, ref_data[:, 2], color="black", linestyle="dashed", label="reference")
     plt.plot(timestamp, data[:, 2], color="blue", alpha=0.7)
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.ylabel("z (m)")
     plt.grid()
 
     plt.xlabel("t (s)")
-
     plt.tight_layout()
 
-def plot_rpy(data, ref_data, timestamp):
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
+
+def plot_rpy(data, ref_data, timestamp, savename=None):
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -81,39 +92,57 @@ def plot_rpy(data, ref_data, timestamp):
     plt.plot(timestamp, data[:, 0], color="blue", alpha=0.7)
     plt.ylabel("roll (deg)")
     plt.legend(loc="upper left")
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.grid()
 
     plt.subplot(312)
     plt.plot(timestamp, ref_data[:, 1], color="black", linestyle="dashed", label="reference")
     plt.plot(timestamp, data[:, 1], color="blue", alpha=0.7)
     plt.ylabel("pitch (deg)")
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.grid()
 
     plt.subplot(313)
     plt.plot(timestamp, ref_data[:, 2], color="black", linestyle="dashed", label="reference")
     plt.plot(timestamp, data[:, 2], color="blue", alpha=0.7)
     plt.ylabel("yaw (deg)")
+    plt.xlim([min(timestamp), max(timestamp)])
     plt.grid()
 
     plt.xlabel("t (s)")
 
     plt.tight_layout()
 
-def plot_xy_ate(data, ref_data, timestamp):
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
+
+def plot_xy_ate(data, ref_data, timestamp, savename=None):
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
     "font.sans-serif": ["Helvetica"]})
 
     ate = np.linalg.norm(data[:, :2] - ref_data[:, :2], ord=1, axis=1)
+    #rmse = np.linalg.norm(data[:, :2] - ref_data[:, :2], ord=2, axis=1)
+    #rmse = np.sqrt(np.mean((data[:, :2] - ref_data[:, :2])**2))
 
-    plt.plot(timestamp, ate, color="gray")
+    plt.plot(timestamp, ate, color="gray", label="ATE (m)", zorder=1)
+
+    plt.hlines(y=np.mean(ate), xmin=timestamp[0], xmax=timestamp[-1], label="mean", colors="red", zorder=2)
+    plt.hlines(y=np.median(ate), xmin=timestamp[0], xmax=timestamp[-1], label="median", colors="green", zorder=2)
+    plt.hlines(y=np.sqrt(np.mean(ate**2)), xmin=timestamp[0], xmax=timestamp[-1], label="rmse", colors="blue", zorder=2)
 
     plt.grid()
     plt.title("ATE")
 
+    plt.xlim([min(timestamp), max(timestamp)])
+    plt.ylim([0, 2])
     plt.xlabel("t (s)")
     plt.ylabel("ATE (m)")
+    plt.legend(loc="upper right")
+
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
 
 def plot_stats_summary():
     pass
@@ -128,12 +157,13 @@ IMU_data, IMU_times = dat.get_imu_in_body()
 GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
 
 
+# timestamp fo filename
+ds = str(datetime.datetime.now().replace(second=0,microsecond=0))[:-3]
 plt.figure(1)
-plot_xy_data(GNSS2_data, equiv_rtk_data)
+plot_xy_data(GNSS2_data, equiv_rtk_data, savename=f"plots/{ds} xy_data.png")
 plt.figure(2)
-plot_xyz(GNSS2_data, equiv_rtk_data, GNSS2_times)
+plot_xyz(GNSS2_data, equiv_rtk_data, GNSS2_times, savename=f"plots/{ds} xyz.png")
 plt.figure(3)
-plot_xy_ate(GNSS2_data, equiv_rtk_data, GNSS2_times)
-plt.show()
-
-plot_xy_data_w_error(GNSS2_data, equiv_rtk_data)
+plot_xy_ate(GNSS2_data, equiv_rtk_data, GNSS2_times, savename=f"plots/{ds} xy_ate.png")
+plt.figure(4)
+plot_xy_data_w_error(GNSS2_data, equiv_rtk_data, savename=f"plots/{ds} xy_w_error.png")
