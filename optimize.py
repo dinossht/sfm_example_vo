@@ -11,7 +11,9 @@ from parameters import param
 ADD_RTK_PRIOR = False #True
 ADD_GPS_PRIOR = True
 ADD_IMU_FACTOR = True
-ADD_CAMERA_FACTOR = True
+ADD_CAMERA_FACTOR = False#True
+
+# NOTE: for IMU + GPS use inv_sigma = 1 and not 100
 
 """Setup IMU preintegration and bias parameters"""
 AccSigma        = 0.01
@@ -148,7 +150,7 @@ class BatchBundleAdjustment:
         # Add position prior
         if ADD_GPS_PRIOR:
             for keyframe in sfm_map.get_keyframes():
-                inv_sigma = 100
+                inv_sigma = 100 
                 if ADD_CAMERA_FACTOR:
                     uncertainty_in_pos = gtsam.noiseModel.Diagonal.Precisions(np.array([0.0, 0.0, 0.0, inv_sigma, inv_sigma, 0.5 * inv_sigma]))
                 else:

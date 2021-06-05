@@ -9,6 +9,7 @@ import numpy as np
 import gtsam
 import cv2
 from load_ros_camera_rtk import camRtkData
+import datetime
 
 
 # TODO: plot feature matches !!!
@@ -193,6 +194,31 @@ def main():
         for geom in get_geometry():
             vis.add_geometry(geom, reset_bounding_box=False)
 
+    def save_result_to_file(vis):
+        est_arr, rtk_arr, ts_arr = [], [], []
+        
+        est_poses = gtsam.utilities.allPose3s(sfm_map.result)
+        for key, keyframe in zip(est_poses.keys(), sfm_map.get_keyframes()):
+            est_pose = est_poses.atPose3(key).matrix()
+            rtk_pose = keyframe.rtk_pose
+            timestamp = keyframe.ts
+
+            est_arr.append(est_pose)
+            rtk_arr.append(rtk_pose)
+            ts_arr.append(timestamp)
+            
+        est_arr = np.array(est_arr)
+        rtk_arr = np.array(rtk_arr)
+        ts_arr = np.array(ts_arr)
+
+        ds = str(datetime.datetime.now().replace(second=0,microsecond=0))[:-3]
+        file_name = input("file name: ")
+        file_name = "results/" + ds + " " + file_name + ".npy"
+        with open(file_name, "wb") as f:
+            np.save(f, est_arr)
+            np.save(f, rtk_arr)
+            np.save(f, ts_arr)
+
     # Create visualizer.
     key_to_callback = {}
     key_to_callback[ord("O")] = optimize
@@ -203,6 +229,7 @@ def main():
     key_to_callback[ord("M")] = M_init_cam
     key_to_callback[ord("P")] = plot_2d_trajectory
     key_to_callback[ord("U")] = iterate_imu
+    key_to_callback[ord("S")] = save_result_to_file
     o3d.visualization.draw_geometries_with_key_callbacks(get_geometry(), key_to_callback)
 
 
