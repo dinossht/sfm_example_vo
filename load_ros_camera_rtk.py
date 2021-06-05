@@ -90,10 +90,8 @@ def set_axes_equal(fignum):
 
 
 class camRtkData:
-    def __init__(self, t_start):
+    def __init__(self, t_start, trip_nr):
         self.init = False
-
-        trip_nr = 3  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
         self.dat = ROSDataset("dataset/rosbags", f"trondheim{trip_nr}_inn", t_start, -1)
         self.gt = ROSGroundTruth(f"dataset/groundtruths/obsv_estimates ({trip_nr}).mat", "dataset/groundtruths/ned_origin.mat", trip_nr)
 

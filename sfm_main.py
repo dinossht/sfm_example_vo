@@ -20,8 +20,12 @@ from load_ros_camera_rtk import camRtkData
 
 N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec 
 
-dat = camRtkData(650)
-#dat = camRtkData(820) # trip 4 starting point
+trip_nr = 4  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
+
+if trip_nr == 3:
+    dat = camRtkData(610, trip_nr)
+if trip_nr == 4:
+    dat = camRtkData(820, trip_nr) # trip 4 starting point
 IMU_data, IMU_times = dat.get_imu_in_body()
 GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
 
@@ -36,7 +40,7 @@ def next_frame():
 def main():
     optimizer = BatchBundleAdjustment()
 
-    sfm_frontend = SFM_frontend(2000, 0.7)
+    sfm_frontend = SFM_frontend(5000, 0.5)
 
     # Initialize
     img0, ts0, T0 = next_frame()
