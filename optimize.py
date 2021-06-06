@@ -10,21 +10,29 @@ from parameters import param
 
 ADD_RTK_PRIOR = False
 
-ADD_GPS_PRIOR = True
+ADD_GPS_PRIOR = False
 ADD_IMU_FACTOR = True
 ADD_CAMERA_FACTOR = False
 
 # NOTE: for IMU + GPS use inv_sigma = 1 and not 100
-inv_sigma_gps = 1
 inv_sigma_rtk = 100
+inv_sigma_gps = 1
+imu_scale = 1
+
+if ADD_CAMERA_FACTOR:
+    inv_sigma_gps = 100
+    imu_scale = 1
+if ADD_CAMERA_FACTOR and ADD_IMU_FACTOR and not ADD_GPS_PRIOR:
+    imu_scale = 0.1
+
 
 
 """Setup IMU preintegration and bias parameters"""
-AccSigma        = 0.01
-GyroSigma       = 0.000175
-IntSigma        = 0.000167  # integtation sigma
-AccBiasSigma    = 2.91e-006
-GyroBiasSigma   = 0.0100395199348279
+AccSigma        = 0.01 * imu_scale
+GyroSigma       = 0.000175 * imu_scale
+IntSigma        = 0.000167 * imu_scale # integtation sigma
+AccBiasSigma    = 2.91e-006 * imu_scale
+GyroBiasSigma   = 0.0100395199348279 * imu_scale
 preintegration_param = gtsam.PreintegrationParams(np.array([0, 0, 9.82175]))
 preintegration_param.setAccelerometerCovariance(AccSigma ** 2 * np.eye(3))
 preintegration_param.setGyroscopeCovariance(GyroSigma ** 2 * np.eye(3))
