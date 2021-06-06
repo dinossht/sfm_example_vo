@@ -12,7 +12,7 @@ ADD_RTK_PRIOR = False
 
 ADD_GPS_PRIOR = False
 ADD_IMU_FACTOR = True
-ADD_CAMERA_FACTOR = False
+ADD_CAMERA_FACTOR = True
 
 # NOTE: for IMU + GPS use inv_sigma = 1 and not 100
 inv_sigma_rtk = 100

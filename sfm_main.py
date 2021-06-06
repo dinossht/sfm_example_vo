@@ -25,9 +25,9 @@ N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec
 trip_nr = 3  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
 
 if trip_nr == 3:
-    dat = camRtkData(610, trip_nr)
+    dat = camRtkData(660, trip_nr) # 610
 if trip_nr == 4:
-    dat = camRtkData(820, trip_nr) # trip 4 starting point
+    dat = camRtkData(820, trip_nr)
 IMU_data, IMU_times = dat.get_imu_in_body()
 GNSS2_data, GNSS2_times, equiv_rtk_data = dat.get_gnss2_pose_in_ned()
 
