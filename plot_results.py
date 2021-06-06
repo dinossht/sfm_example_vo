@@ -4,9 +4,14 @@ from matplotlib import cm
 import matplotlib.font_manager
 import numpy as np
 import datetime
+import shutil
+import os
 
 
 def plot_xy_data(data, ref_data, xlabel="y (m)", ylabel="x (m)", savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -24,6 +29,9 @@ def plot_xy_data(data, ref_data, xlabel="y (m)", ylabel="x (m)", savename=None):
         plt.savefig(savename, bbox_inches='tight')
 
 def plot_xy_data_w_error(data, ref_data, xlabel="y (m)", ylabel="x (m)", savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -51,6 +59,9 @@ def plot_xy_data_w_error(data, ref_data, xlabel="y (m)", ylabel="x (m)", savenam
         plt.savefig(savename, bbox_inches='tight')
 
 def plot_xyz(data, ref_data, timestamp, savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -84,6 +95,9 @@ def plot_xyz(data, ref_data, timestamp, savename=None):
         plt.savefig(savename, bbox_inches='tight')
 
 def plot_rpy(data, ref_data, timestamp, savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
@@ -130,12 +144,15 @@ def plot_rpy(data, ref_data, timestamp, savename=None):
         plt.savefig(savename, bbox_inches='tight')
 
 def plot_xy_ate(data, ref_data, timestamp, savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
     plt.rcParams.update({
     "text.usetex": True,
     "font.family": "sans-serif",
     "font.sans-serif": ["Helvetica"]})
 
-    ate = np.linalg.norm(data[:, :2] - ref_data[:, :2], ord=1, axis=1)
+    ate = np.linalg.norm(data[:,:2,3] - ref_data[:,:2,3], ord=1, axis=1)
     #rmse = np.linalg.norm(data[:, :2] - ref_data[:, :2], ord=2, axis=1)
     #rmse = np.sqrt(np.mean((data[:, :2] - ref_data[:, :2])**2))
 
@@ -149,7 +166,7 @@ def plot_xy_ate(data, ref_data, timestamp, savename=None):
     plt.title("ATE")
 
     plt.xlim([min(timestamp), max(timestamp)])
-    plt.ylim([0, 2])
+    plt.ylim([0, max(2, max(ate))])
     plt.xlabel("t (s)")
     plt.ylabel("ATE (m)")
     plt.legend(loc="upper right")
@@ -157,28 +174,69 @@ def plot_xy_ate(data, ref_data, timestamp, savename=None):
     if savename is not None:
         plt.savefig(savename, bbox_inches='tight')
 
+def plot_yaw_error(data, ref_data, timestamp, savename=None):
+    plt.cla()
+    plt.clf()
+    plt.close()
+    plt.rcParams.update({
+    "text.usetex": True,
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Helvetica"]})
+
+    eulers, eulers_ref = [], []
+    for d, r in zip(data, ref_data):
+        [yaw, pitch, roll] = R.from_matrix(d[:3,:3]).as_euler("zyx", degrees=True)
+        [yaw_ref, pitch_ref, roll_ref] = R.from_matrix(r[:3,:3]).as_euler("zyx", degrees=True)
+        eulers.append([roll, pitch, yaw])
+        eulers_ref.append([roll_ref, pitch_ref, yaw_ref])
+    eulers = np.array(eulers)
+    eulers_ref = np.array(eulers_ref)
+
+    ae = np.abs(eulers[:,2] - eulers_ref[:,2])
+
+    plt.plot(timestamp, ae, color="gray", label="ATE (m)", zorder=1)
+
+    plt.hlines(y=np.mean(ae), xmin=timestamp[0], xmax=timestamp[-1], label="mean", colors="red", zorder=2)
+    plt.hlines(y=np.median(ae), xmin=timestamp[0], xmax=timestamp[-1], label="median", colors="green", zorder=2)
+    plt.hlines(y=np.sqrt(np.mean(ae**2)), xmin=timestamp[0], xmax=timestamp[-1], label="rmse", colors="blue", zorder=2)
+
+    plt.grid()
+    plt.title("MAE")
+
+    plt.xlim([min(timestamp), max(timestamp)])
+    plt.ylim([0, max(5, max(ae))])
+    plt.xlabel("t (s)")
+    plt.ylabel("MAE (deg)")
+    plt.legend(loc="upper right")
+
+    if savename is not None:
+        plt.savefig(savename, bbox_inches='tight')
+
 def plot_stats_summary():
+    plt.cla()
+    plt.clf()
+    plt.close()
     pass
 
 
-filename = "2021-06-05 18:04 imu.npy"
-filepath = "results/" + filename
+filename = "2021-06-06 11:03 cam_imu.npy"
+
 plot_filename = filename.split(".")[0]
+plot_folder = f"plots/{plot_filename}"
+
+#shutil.rmtree(plot_folder)
+os.mkdir(plot_folder)
+
+filepath = "results/" + filename
 with open(filepath, "rb") as f:
     est = np.load(f)
     rtk = np.load(f)
     ts = np.load(f)
 
     # timestamp fo filename
-    plt.figure(1)
-    plot_xy_data(est, rtk, savename=f"plots/{plot_filename} xy_data.png")
-    plt.figure(2)
-    plot_xyz(est, rtk, ts, savename=f"plots/{plot_filename} xyz.png")
-    plt.figure(3)
-    plot_rpy(est, rtk, ts, savename=f"plots/{plot_filename} rpy.png")
-    """
-    plt.figure(3)
-    plot_xy_ate(GNSS2_data, equiv_rtk_data, GNSS2_times, savename=f"plots/{plot_filename} xy_ate.png")
-    plt.figure(4)
-    plot_xy_data_w_error(GNSS2_data, equiv_rtk_data, savename=f"plots/{plot_filename} xy_w_error.png")
-    """
+    plot_xy_data(est, rtk, savename=f"{plot_folder}/xy_data.png")
+    plot_xyz(est, rtk, ts, savename=f"{plot_folder}/xyz.png")
+    plot_rpy(est, rtk, ts, savename=f"{plot_folder}/rpy.png")
+    plot_xy_data_w_error(est, rtk, savename=f"{plot_folder}/xy_w_error.png")
+    plot_xy_ate(est, rtk, ts, savename=f"{plot_folder}/xy_ate.png")
+    plot_yaw_error(est, rtk, ts, savename=f"{plot_folder}/yaw_mae.png")
