@@ -219,24 +219,27 @@ def plot_stats_summary():
     pass
 
 
-filename = "2021-06-06 11:03 cam_imu.npy"
+def plot_all(filename):
+    plot_filename = filename.split(".")[0]
+    plot_folder = f"plots/{plot_filename}"
 
-plot_filename = filename.split(".")[0]
-plot_folder = f"plots/{plot_filename}"
+    #shutil.rmtree(plot_folder)
+    os.mkdir(plot_folder)
 
-#shutil.rmtree(plot_folder)
-os.mkdir(plot_folder)
+    filepath = "results/" + filename
+    with open(filepath, "rb") as f:
+        est = np.load(f)
+        rtk = np.load(f)
+        ts = np.load(f)
 
-filepath = "results/" + filename
-with open(filepath, "rb") as f:
-    est = np.load(f)
-    rtk = np.load(f)
-    ts = np.load(f)
+        # timestamp fo filename
+        plot_xy_data(est, rtk, savename=f"{plot_folder}/xy_data.png")
+        plot_xyz(est, rtk, ts, savename=f"{plot_folder}/xyz.png")
+        plot_rpy(est, rtk, ts, savename=f"{plot_folder}/rpy.png")
+        plot_xy_data_w_error(est, rtk, savename=f"{plot_folder}/xy_w_error.png")
+        plot_xy_ate(est, rtk, ts, savename=f"{plot_folder}/xy_ate.png")
+        plot_yaw_error(est, rtk, ts, savename=f"{plot_folder}/yaw_mae.png")
 
-    # timestamp fo filename
-    plot_xy_data(est, rtk, savename=f"{plot_folder}/xy_data.png")
-    plot_xyz(est, rtk, ts, savename=f"{plot_folder}/xyz.png")
-    plot_rpy(est, rtk, ts, savename=f"{plot_folder}/rpy.png")
-    plot_xy_data_w_error(est, rtk, savename=f"{plot_folder}/xy_w_error.png")
-    plot_xy_ate(est, rtk, ts, savename=f"{plot_folder}/xy_ate.png")
-    plot_yaw_error(est, rtk, ts, savename=f"{plot_folder}/yaw_mae.png")
+
+if __name__ == "__main__":
+    pass

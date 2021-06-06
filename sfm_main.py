@@ -9,6 +9,7 @@ import numpy as np
 import gtsam
 import cv2
 from load_ros_camera_rtk import camRtkData
+from plot_results import plot_all
 import datetime
 
 
@@ -21,7 +22,7 @@ import datetime
 
 N = 10 #NOTE: imu vel is dependant on this, 10 frames == 1 sec 
 
-trip_nr = 4  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
+trip_nr = 3  # pass på sensorer er montert (pos og heading) ulike og vil på virke det for ulike dager
 
 if trip_nr == 3:
     dat = camRtkData(610, trip_nr)
@@ -213,11 +214,14 @@ def main():
 
         ds = str(datetime.datetime.now().replace(second=0,microsecond=0))[:-3]
         file_name = input("file name: ")
-        file_name = "results/" + ds + " " + file_name + ".npy"
-        with open(file_name, "wb") as f:
+        file_name = ds + " " + file_name + ".npy"
+        file_path = "results/" + file_name
+        with open(file_path, "wb") as f:
             np.save(f, est_arr)
             np.save(f, rtk_arr)
             np.save(f, ts_arr)
+
+        plot_all(file_name)
 
     # Create visualizer.
     key_to_callback = {}
